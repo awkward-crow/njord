@@ -15,10 +15,10 @@ jobs:
           use-public-rspm: true
 
       - name: Install knitr
-        run: Rscript -e "install.packages('knitr', repos = 'https://cloud.r-project.org')"
+        run: Rscript --no-init-file -e "install.packages('knitr', repos = 'https://cloud.r-project.org')"
 
       - name: Knit README
-        run: Rscript -e "knitr::knit('README.Rmd', output = 'README.md.new', quiet = TRUE)"
+        run: Rscript --no-init-file -e "knitr::knit('README.Rmd', output = 'README.md.new', quiet = TRUE)"
 
       - name: Check sync
         run: |
