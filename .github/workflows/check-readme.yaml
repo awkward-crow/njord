@@ -14,11 +14,11 @@ jobs:
         with:
           use-public-rspm: true
 
-      - name: Install knitr
-        run: Rscript --no-init-file -e "install.packages('knitr', repos = 'https://cloud.r-project.org')"
+      - name: Install rmarkdown
+        run: Rscript --no-init-file -e "install.packages('rmarkdown', repos = 'https://cloud.r-project.org')"
 
-      - name: Knit README
-        run: Rscript --no-init-file -e "knitr::knit('README.Rmd', output = 'README.md.new', quiet = TRUE)"
+      - name: Render README
+        run: Rscript --no-init-file -e "rmarkdown::render('README.Rmd', output_file = 'README.md.new', quiet = TRUE)"
 
       - name: Check sync
         run: |
