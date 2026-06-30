@@ -1,2 +1,2 @@
 README.md: README.Rmd
-	Rscript -e "devtools::build_readme()"
+	Rscript -e "rmarkdown::render('README.Rmd', quiet = TRUE)"
