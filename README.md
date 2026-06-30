@@ -10,7 +10,3 @@ UK/European windstorm, using ERA5/Copernicus CDS gust-speed data.
 # install.packages("devtools")
 devtools::install_github("awkward-crow/njord")
 ```
-
-## overview
-
-TBC
