@@ -14,9 +14,8 @@ jobs:
         with:
           use-public-rspm: true
 
-      - uses: r-lib/actions/setup-r-dependencies@v2
-        with:
-          packages: knitr
+      - name: Install knitr
+        run: Rscript -e "install.packages('knitr', repos = 'https://cloud.r-project.org')"
 
       - name: Knit README
         run: Rscript -e "knitr::knit('README.Rmd', output = 'README.md.new', quiet = TRUE)"
