@@ -1,0 +1,28 @@
+Package: njord
+Title: Parametric Windstorm Trigger Design and Basis Risk Quantification
+Version: 0.0.0.9000
+Authors@R: person("Michael", "Campbell", role = c("aut", "cre"),
+    email = "m.campbell@tutanota.com")
+Description: Hazard modelling, parametric trigger design, and basis risk
+    quantification for UK/European windstorm using ERA5/Copernicus CDS data.
+    Fits negative binomial frequency and GPD severity models to historical
+    storm footprints, defines tiered gust-speed payout schedules, benchmarks
+    against an MDR-based indemnity loss model, and decomposes basis risk by
+    source (geographic resolution, aggregation window, trigger functional form).
+License: MIT + file LICENSE
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 8.0.0
+Imports:
+    dplyr,
+    tidyr,
+    purrr,
+    ggplot2,
+    sf,
+    evd,
+    copula,
+    ecmwfr
+Suggests:
+    testthat (>= 3.0.0),
+    devtools
+Config/testthat/edition: 3
