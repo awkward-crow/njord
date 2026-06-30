@@ -1,0 +1,24 @@
+---
+output: github_document
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.path = "man/figures/README-"
+)
+```
+
+# njord
+
+Parametric windstorm trigger design and basis risk quantification for UK/European
+windstorm, using ERA5/Copernicus CDS gust-speed data.
+
+## installation
+
+```{r, eval = FALSE}
+# install.packages("devtools")
+devtools::install_github("awkward-crow/njord")
+```
+
