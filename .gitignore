@@ -1,3 +1,10 @@
 .nix-Rlibs/
 local
 
+.Rproj.user
+.Rhistory
+.RData
+.httr-oauth
+.DS_Store
+.quarto
+inst/doc
