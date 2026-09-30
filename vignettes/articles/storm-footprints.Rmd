@@ -100,15 +100,24 @@ checks that:
 For the download of 2026-09-28 all four hold: 721 zips, 1,905 footprints for
 1,905 storms, and no date mismatches.
 
+Once the download has passed the check,
+[`unzip_footprints.sh`](https://github.com/awkward-crow/njord/blob/main/inst/scripts/unzip_footprints.sh)
+unpacks the zips into a single directory of 1,905 NetCDF files, one per storm.
+
 The scripts' own
 [readme](https://github.com/awkward-crow/njord/blob/main/inst/scripts/Readme.md)
 has the details of what each one writes and the order to run them in.
 
 ## What a footprint contains
 
-Each footprint is a small NetCDF file, 50 to 60 KB, holding a single gridded
-variable, `decontaminated_footprint`. Its value at a grid cell is the maximum
-10 m gust there over a 72-hour window of the storm.
+Each footprint is a small NetCDF file, between 35 and 80 KB, holding a single
+gridded variable, `decontaminated_footprint`. Its value at a grid cell is the
+maximum 10 m gust there, in m/s, over a 72-hour window.
+
+The window is centred on what the file calls the footprint central time, which
+it records alongside the start and end times of the track. The central time is
+not the start of the track: for storm Ciara, whose track starts at 00:00 on
+9 February 2020, it is 18:00 that day.
 
 Every footprint is on the same grid: 0.25° cells from 25°W to 35°E and from
 30°N to 70°N, which is 241 cells by 161. Because the grid is fixed, footprints
@@ -125,12 +134,94 @@ The filename carries the storm's start date and its track id, and the id is
 the same as the `id` in the tracks CSV. That is how a footprint is tied back to
 its storm.
 
+## Shared gusts between storms
+
+The footprints of storms that are close together in time are not independent.
+Of the 1,905 storms, 308 (16%) have exactly the same maximum gust as at least
+one other storm.
+
+These storms fall into 148 groups: 138 pairs, 8 groups of three and 2 groups of
+four. In every group the maximum is at the same grid cell, so it is one gust
+recorded in more than one footprint, not two gusts that happen to be equal. The
+storms in a group start within a few days of each other: no more than 3 days
+apart in 130 of the groups, and 8 days at most. A likely reason is that the
+72-hour windows of neighbouring storms overlap, so a gust inside both windows
+and within 1000 km of both tracks goes into both footprints.
+
+The sharing is not confined to the maximum. Among the 174 pairs of storms with
+a shared maximum, comparing the cells where both footprints have a value, the
+median pair has identical values in 55% of them. A few pairs are identical in
+all of them, and the least alike still agree in 5%.
+
+Nor is it confined to those pairs. Of the 649 pairs of storms that start
+within 3 days of each other, 454 (70%) have identical values in at least some
+cells.
+
+This matters for the hazard model in two ways. A severity computed storm by
+storm counts the same gusts more than once when storms cluster. And two storms
+that share most of a footprint may be better treated as one event than as two,
+which affects the storm counts.
+
+The code for these figures is in the [appendix](#appendix-shared-gusts).
+
+## Appendix: code for the shared gusts {#appendix-shared-gusts}
+
+The code is not run when the article is built, since it needs the unpacked
+footprints in `data-raw/footprints/nc/`. It is run from the project root and
+takes about 20 seconds. The figures above are for the download of 2026-09-28.
+
+```{r, eval = FALSE}
+library(terra)
+
+files <- list.files("data-raw/footprints/nc", pattern = "\\.nc$",
+                    full.names = TRUE)
+start <- as.Date(sub(".*raw-([0-9]{8})-.*", "\\1", basename(files)), "%Y%m%d")
+
+# One column per storm, one row per grid cell.
+gusts <- vapply(files, function(f) values(rast(f))[, 1], numeric(161 * 241))
+
+# The maximum gust of each storm and the grid cell it is at.
+max_gust <- apply(gusts, 2, max, na.rm = TRUE)
+max_cell <- apply(gusts, 2, which.max)
+
+# Groups of storms with exactly the same maximum gust.
+groups <- split(seq_along(files), max_gust)
+groups <- groups[lengths(groups) > 1]
+
+length(groups)                    # groups
+sum(lengths(groups))              # storms in a group
+table(lengths(groups))            # group sizes
+
+# Is the maximum at the same grid cell within every group?
+all(vapply(groups, function(g) length(unique(max_cell[g])) == 1, NA))
+
+# Days between the earliest and latest start date in each group.
+table(vapply(groups, function(g) as.numeric(diff(range(start[g]))), 0))
+
+# For a pair of storms: the number of cells where both have a value, and the
+# number of those where the values are identical.
+overlap <- function(pair) {
+  a <- gusts[, pair[1]]
+  b <- gusts[, pair[2]]
+  both <- !is.na(a) & !is.na(b)
+  c(both = sum(both), identical = sum(a[both] == b[both]))
+}
+
+# Pairs of storms that share a maximum.
+pairs_max <- do.call(cbind, lapply(groups, combn, 2))
+ov_max <- apply(pairs_max, 2, overlap)
+ncol(pairs_max)
+summary(ov_max["identical", ] / ov_max["both", ])
+
+# All pairs of storms that start within 3 days of each other.
+gap <- abs(outer(as.numeric(start), as.numeric(start), "-"))
+pairs_near <- t(which(gap <= 3 & upper.tri(gap), arr.ind = TRUE))
+ov_near <- apply(pairs_near, 2, overlap)
+ncol(pairs_near)                                           # pairs
+sum(ov_near["identical", ] > 0)                            # with identical cells
+sum(max_gust[pairs_near[1, ]] == max_gust[pairs_near[2, ]])  # with the same maximum
+```
+
 
 <!-- TBC:
- - The grid extent, the file size and the variable
-    name are the ones worth confirming with terra once the footprints are unzipped.
-  - "Decontaminated" is unexplained. What does the CDS means by it, it has been left as the variable name only. It probably deserves a sentence from the dataset documentation.
-  - When the 72-hour window starts relative to the storm is not clear, so the text says only "a 72-hour window
-    of the storm".
-  - No units are given for the gust. Expect m/s but it hasn't been verified.
--->
+  - "Decontaminated" is unexplained. What does the CDS means by it, it has been left as the variable name only. It probably deserves a sentence from the dataset documentation.-->
