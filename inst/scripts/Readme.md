@@ -1,10 +1,16 @@
 # Download scripts
 
-These scripts download the raw hazard data used by njord from the Copernicus
-Climate Data Store (CDS) dataset
+These scripts download the raw hazard data used by njord and the region
+boundaries used to pick out the UK.
+
+The storm data come from the Copernicus Climate Data Store (CDS) dataset
 [`sis-european-wind-storm-reanalysis`](https://cds.climate.copernicus.eu/datasets/sis-european-wind-storm-reanalysis)
-(Hodges tracking, 1940–2026), check that the download is complete, and unpack
-it. A CDS account is required.
+(Hodges tracking, 1940–2026). The scripts download it, check that the download
+is complete, and unpack it. A CDS account is required.
+
+The region boundaries are the NUTS 2021 regions from
+[Eurostat GISCO](https://ec.europa.eu/eurostat/web/gisco). No account is
+needed.
 
 **Run every script from the project root.** All paths in the scripts are
 relative to it, and all output goes to `data-raw/`.
@@ -15,6 +21,7 @@ relative to it, and all output goes to `data-raw/`.
 | `download_footprints.R` | `footprints/footprints_hodges_YYYYMM.zip`, one per year-month      |
 | `check_footprints.sh`   | nothing; prints a report                                           |
 | `unzip_footprints.sh`   | `footprints/nc/*.nc`, one per storm                                |
+| `download_nuts.R`       | `nuts/NUTS_RG_01M_2021_4326_LEVL_1.geojson`                        |
 
 ## download_tracks.R
 
@@ -78,3 +85,19 @@ failed zips:
 zips: 721
 footprint files: 1905
 ```
+
+## download_nuts.R
+
+Downloads the boundaries of the NUTS level 1 regions of Europe, from the 2021
+NUTS version, at 1:1 million scale, in longitude and latitude (WGS 84), the
+same coordinates as the footprints. The file is a single GeoJSON of 13.8 MB.
+
+The CDS summary indicators use exactly the NUTS 2021 regions, for every year
+from 1940 to 2025, so the footprints are aggregated to the same regions. 2021
+is also the latest NUTS version that includes the UK. The UK has 12 level 1
+regions, `UKC` to `UKN`.
+
+It doesn't depend on the other scripts. An existing file is not downloaded
+again.
+
+Administrative boundaries: © EuroGeographics.
