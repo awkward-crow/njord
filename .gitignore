@@ -1,6 +1,8 @@
+data-raw/
 .nix-Rlibs/
 local
 
+.Rprofile
 .Rproj.user
 .Rhistory
 .RData

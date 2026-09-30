@@ -13,7 +13,14 @@
         rPackages.testthat
         rPackages.devtools
         rPackages.roxygen2
+        rPackages.codetools
+        rPackages.terra
+        rPackages.ecmwfr
+        rPackages.readxl
+        rPackages.MASS
+        rPackages.evd
 
+        netcdf
         glibcLocales
       ];
       shellHook = ''
