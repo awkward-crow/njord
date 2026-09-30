@@ -3,8 +3,8 @@
 These scripts download the raw hazard data used by njord from the Copernicus
 Climate Data Store (CDS) dataset
 [`sis-european-wind-storm-reanalysis`](https://cds.climate.copernicus.eu/datasets/sis-european-wind-storm-reanalysis)
-(Hodges tracking, 1940–2026), and check that the download is complete. A CDS
-account is required.
+(Hodges tracking, 1940–2026), check that the download is complete, and unpack
+it. A CDS account is required.
 
 **Run every script from the project root.** All paths in the scripts are
 relative to it, and all output goes to `data-raw/`.
@@ -14,6 +14,7 @@ relative to it, and all output goes to `data-raw/`.
 | `download_tracks.R`     | `reanalysis_tracks_hodges.zip`                                     |
 | `download_footprints.R` | `footprints/footprints_hodges_YYYYMM.zip`, one per year-month      |
 | `check_footprints.sh`   | nothing; prints a report                                           |
+| `unzip_footprints.sh`   | `footprints/nc/*.nc`, one per storm                                |
 
 ## download_tracks.R
 
@@ -36,7 +37,7 @@ on where it stopped.
 
 ## check_footprints.sh
 
-Checks the footprint download against the tracks, so run it last, after
+Checks the footprint download against the tracks, so run it after
 `download_tracks.R` and `download_footprints.R`. It doesn't extract
 anything. It:
 
@@ -59,4 +60,21 @@ track ids: 1905
 tracks without footprint:
 footprints without track:
 date mismatches: 0
+```
+
+## unzip_footprints.sh
+
+Extracts the `.nc` files from every footprint zip into
+`data-raw/footprints/nc/`, one file per storm. Run it last, once
+`check_footprints.sh` shows the download is complete.
+
+The zips are left in place. A file that already exists is not overwritten, so
+the script can be run again. It lists any zip that fails to extract.
+
+For the download on 2026-09-28 it gave:
+
+```
+failed zips:
+zips: 721
+footprint files: 1905
 ```
