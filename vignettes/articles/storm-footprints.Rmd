@@ -1,0 +1,136 @@
+---
+title: "The storm footprints data"
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+## The dataset
+
+The hazard data come from the Copernicus Climate Data Store (CDS) dataset
+[`sis-european-wind-storm-reanalysis`](https://cds.climate.copernicus.eu/datasets/sis-european-wind-storm-reanalysis),
+a catalogue of European windstorms from 1940 to 2026 derived from reanalysis.
+Storms are identified by one of two tracking algorithms, Hodges and
+TempestExtremes; njord uses the Hodges tracks. A CDS account is needed to
+download anything.
+
+The dataset has three products:
+
+- **Summary indicators.** One row per year, NUTS region and gust threshold
+  (0, 15.6, 20 and 25 m/s), giving the number of storms and statistics of the
+  gusts they brought to the region.
+- **Tracks.** The path of each storm: one row per storm per 6-hour time step,
+  with the position of the storm centre, the mean sea level pressure and the
+  gust there.
+- **Footprints.** One gridded field per storm: the maximum 10 m gust at each
+  grid cell over a 72-hour window.
+
+## Why the footprints
+
+The hazard model needs a severity for each storm, measured over the UK. Only
+the footprints provide one.
+
+The summary indicators look like the natural starting point, since they are
+already aggregated to UK regions. But their values are yearly: the storm
+severity index (SSI) in a row is for all the storms of that year in that
+region, not for any one storm. It is also computed from the mean gust, the
+cube of the mean gust scaled by the area affected, so it adds nothing to the
+mean gust itself.
+
+The tracks are per storm, but the gust they record is at the storm centre.
+That is not where the strongest winds are, and the centre need not be over the
+UK at all.
+
+So the per-storm severity is computed from the footprints, and the other two
+products play supporting parts. The tracks say which storms exist and when
+each one started, which is what the footprint download needs. The summary
+indicators give yearly storm counts to check against. <!-- TODO - this needs to be verified! -->
+
+## Tracks first
+
+The footprints cannot be downloaded in one go. The CDS serves them one storm
+at a time, and a storm is asked for by the date it started: a year, a month
+and a day. So the start dates have to be known first, and they come from the
+tracks.
+
+The tracks can be had in a single request for all storms, which is what
+[`download_tracks.R`](https://github.com/awkward-crow/njord/blob/main/inst/scripts/download_tracks.R)
+does. The result is a zip holding one CSV. Each storm has an id, and its start
+date is the date of its earliest time step.
+
+The download of 2026-09-28 has 1,905 storms, starting on 1,826 distinct dates:
+on 75 dates more than one storm started.
+
+## Downloading the footprints
+
+<!-- TODO: add something about how numbers that follow refer to a download carried out on 2026-09-28 and check the number of storms etc -->
+
+[`download_footprints.R`](https://github.com/awkward-crow/njord/blob/main/inst/scripts/download_footprints.R)
+reads the start dates from the tracks zip and downloads the footprint of every
+storm.
+
+A request can list several days, as long as they are in the same month. So the
+script groups the start dates by year and month and sends one request for each
+year-month that has storms, 721 requests in all. Each request returns a zip
+with one NetCDF file per storm, named with the storm's start date and track id.
+
+The footprints are requested at the original 0.25° resolution, covering the
+storm's footprint area rather than the full domain.
+
+A download of this size takes hours and is likely to be interrupted. The
+script skips any year-month whose zip already exists, so running it again
+carries on where it stopped.
+
+## Checking the download
+
+With 721 requests, a missing or damaged file would be easy to overlook.
+[`check_footprints.sh`](https://github.com/awkward-crow/njord/blob/main/inst/scripts/check_footprints.sh)
+compares what was downloaded with the tracks, without extracting anything. It
+checks that:
+
+- every zip is intact;
+- every storm in the tracks has a footprint, and only one;
+- no footprint belongs to a storm that is not in the tracks;
+- the date in each footprint's filename is its storm's start date.
+
+For the download of 2026-09-28 all four hold: 721 zips, 1,905 footprints for
+1,905 storms, and no date mismatches.
+
+The scripts' own
+[readme](https://github.com/awkward-crow/njord/blob/main/inst/scripts/Readme.md)
+has the details of what each one writes and the order to run them in.
+
+## What a footprint contains
+
+Each footprint is a small NetCDF file, 50 to 60 KB, holding a single gridded
+variable, `decontaminated_footprint`. Its value at a grid cell is the maximum
+10 m gust there over a 72-hour window of the storm.
+
+Every footprint is on the same grid: 0.25° cells from 25°W to 35°E and from
+30°N to 70°N, which is 241 cells by 161. Because the grid is fixed, footprints
+can be compared or stacked cell by cell without any regridding.
+
+Only the cells near the storm have values. Cells more than 1000 km from the
+track are `NaN`, so a footprint says nothing about gusts far from the storm,
+and a storm that passed well away from the UK has no UK values at all.
+
+The file does not say which cells are land. A land-sea mask has to come from
+somewhere else before gusts over the UK can be picked out.
+
+The filename carries the storm's start date and its track id, and the id is
+the same as the `id` in the tracks CSV. That is how a footprint is tied back to
+its storm.
+
+
+<!-- TBC:
+ - The grid extent, the file size and the variable
+    name are the ones worth confirming with terra once the footprints are unzipped.
+  - "Decontaminated" is unexplained. What does the CDS means by it, it has been left as the variable name only. It probably deserves a sentence from the dataset documentation.
+  - When the 72-hour window starts relative to the storm is not clear, so the text says only "a 72-hour window
+    of the storm".
+  - No units are given for the gust. Expect m/s but it hasn't been verified.
+-->
