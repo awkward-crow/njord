@@ -20,6 +20,12 @@ knitr::opts_chunk$set(
 
 The goal of njord is to ...
 
+## Data
+
+The raw hazard data comes from the Copernicus Climate Data Store and is not
+included in the package. The scripts that download it into `data-raw/`, and
+check it, are in [`inst/scripts/`](inst/scripts/Readme.md).
+
 ## Installation
 
 You can install the development version of njord like so:
@@ -27,28 +33,3 @@ You can install the development version of njord like so:
 ``` r
 # FILL THIS IN! HOW CAN PEOPLE INSTALL YOUR DEV PACKAGE?
 ```
-
-## Example
-
-This is a basic example which shows you how to solve a common problem:
-
-```{r example}
-library(njord)
-## basic example code
-```
-
-What is special about using `README.Rmd` instead of just `README.md`? You can include R chunks like so:
-
-```{r cars}
-summary(cars)
-```
-
-You'll still need to render `README.Rmd` regularly, to keep `README.md` up-to-date. `devtools::build_readme()` is handy for this.
-
-You can also embed plots, for example:
-
-```{r pressure, echo = FALSE}
-plot(pressure)
-```
-
-In that case, don't forget to commit and push the resulting figure files, so they display on GitHub and CRAN.
