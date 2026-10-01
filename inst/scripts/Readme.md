@@ -1,7 +1,8 @@
-# Download scripts
+# Data scripts
 
 These scripts download the raw hazard data used by njord and the region
-boundaries used to pick out the UK.
+boundaries used to pick out the UK, and put the UK regions on the footprint
+grid.
 
 The storm data come from the Copernicus Climate Data Store (CDS) dataset
 [`sis-european-wind-storm-reanalysis`](https://cds.climate.copernicus.eu/datasets/sis-european-wind-storm-reanalysis)
@@ -22,6 +23,7 @@ relative to it, and all output goes to `data-raw/`.
 | `check_footprints.sh`   | nothing; prints a report                                           |
 | `unzip_footprints.sh`   | `footprints/nc/*.nc`, one per storm                                |
 | `download_nuts.R`       | `nuts/NUTS_RG_01M_2021_4326_LEVL_1.geojson`                        |
+| `rasterize_uk.R`        | `nuts/uk_nuts1_cover.tif`                                          |
 
 ## download_tracks.R
 
@@ -99,5 +101,25 @@ regions, `UKC` to `UKN`.
 
 It doesn't depend on the other scripts. An existing file is not downloaded
 again.
+
+## rasterize_uk.R
+
+Puts the 12 UK NUTS level 1 regions on the footprint grid. For every grid
+cell it records the fraction of the cell covered by each region, so a coastal
+cell that is 30% land counts as 0.3. The output is a GeoTIFF with 13 layers:
+one per region, `UKC` to `UKN`, and a last layer, `UK`, for the whole
+country. A cell with no land in a region is `NA` in that region's layer.
+Small islands are kept.
+
+The grid is taken from a footprint file, not built from scratch: the
+footprint cell centres are on quarter degrees, so the cell edges fall at .125
+and .375.
+
+It needs `download_nuts.R` and `unzip_footprints.sh` to have been run. An
+existing output file is not made again.
+
+For the NUTS file downloaded on 2026-09-30 it gave 750 cells with some UK
+land, adding up to 538.8 whole cells. That is 244,671 km², against 244,545 km²
+from the region boundaries.
 
 Administrative boundaries: © EuroGeographics.
