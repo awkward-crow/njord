@@ -1,8 +1,8 @@
 # Data scripts
 
 These scripts download the raw hazard data used by njord and the region
-boundaries used to pick out the UK, and put the UK regions on the footprint
-grid.
+boundaries used to pick out the UK, put the UK regions on the footprint
+grid, and summarise each storm's footprint over the UK.
 
 The storm data come from the Copernicus Climate Data Store (CDS) dataset
 [`sis-european-wind-storm-reanalysis`](https://cds.climate.copernicus.eu/datasets/sis-european-wind-storm-reanalysis)
@@ -24,6 +24,7 @@ relative to it, and all output goes to `data-raw/`.
 | `unzip_footprints.sh`   | `footprints/nc/*.nc`, one per storm                                |
 | `download_nuts.R`       | `nuts/NUTS_RG_01M_2021_4326_LEVL_1.geojson`                        |
 | `rasterize_uk.R`        | `nuts/uk_nuts1_cover.tif`                                          |
+| `uk_storm_values.R`     | `uk_storm_values.csv`, one row per storm                           |
 
 ## download_tracks.R
 
@@ -123,3 +124,33 @@ land, adding up to 538.8 whole cells. That is 244,671 km², against 244,545 km²
 from the region boundaries.
 
 Administrative boundaries: © EuroGeographics.
+
+## uk_storm_values.R
+
+Summarises each storm's footprint over UK land. The output is a CSV with
+one row per storm:
+
+| Column         | Meaning                                                  |
+|----------------|----------------------------------------------------------|
+| `track_id`     | the storm's track id, from the footprint filename        |
+| `start_date`   | the storm's start date, from the footprint filename      |
+| `n_valid`      | UK cells with a gust value, out of 750                   |
+| `max_gust`     | the highest gust in any UK cell (m/s)                    |
+| `area_25`      | UK land area with gusts above 25 m/s (km²)               |
+| `mean_gust_25` | the mean gust over that area (m/s)                       |
+| `ssi`          | storm severity index, `mean_gust_25`³ × `area_25`        |
+
+Cells are weighted by their UK land fraction, from the `UK` layer of
+`uk_nuts1_cover.tif`, and by their area in km², which shrinks with latitude.
+"Above 25 m/s" means strictly greater. The SSI follows the definition in the
+CDS summary indicators: the mean gust over the area above the threshold,
+cubed, times that area.
+
+Footprint cells that are `NaN` are left out. A storm with no UK cell values
+has `max_gust` `NA`, and `area_25` and `ssi` zero.
+
+It needs `unzip_footprints.sh` and `rasterize_uk.R` to have been run. An
+existing output file is not made again.
+
+For the footprints downloaded on 2026-09-28 it gave 1,905 storms. 27 have
+no UK cell values, and 1,563 have some UK land above 25 m/s.
