@@ -130,15 +130,17 @@ Administrative boundaries: © EuroGeographics.
 Summarises each storm's footprint over UK land. The output is a CSV with
 one row per storm:
 
-| Column         | Meaning                                                  |
-|----------------|----------------------------------------------------------|
-| `track_id`     | the storm's track id, from the footprint filename        |
-| `start_date`   | the storm's start date, from the footprint filename      |
-| `n_valid`      | UK cells with a gust value, out of 750                   |
-| `max_gust`     | the highest gust in any UK cell (m/s)                    |
-| `area_25`      | UK land area with gusts above 25 m/s (km²)               |
-| `mean_gust_25` | the mean gust over that area (m/s)                       |
-| `ssi`          | storm severity index, `mean_gust_25`³ × `area_25`        |
+| Column         | Meaning                                                         |
+|----------------|-----------------------------------------------------------------|
+| `track_id`     | the storm's track id, from the footprint filename               |
+| `start_date`   | the storm's start date, from the footprint filename             |
+| `start_time`   | the time of the track's first point (UTC)                       |
+| `central_time` | the centre of the 72-hour window the gusts are taken over (UTC) |
+| `n_valid`      | UK cells with a gust value, out of 750                          |
+| `max_gust`     | the highest gust in any UK cell (m/s)                           |
+| `area_25`      | UK land area with gusts above 25 m/s (km²)                      |
+| `mean_gust_25` | the mean gust over that area (m/s)                              |
+| `ssi`          | storm severity index, `mean_gust_25`³ × `area_25`               |
 
 Cells are weighted by their UK land fraction, from the `UK` layer of
 `uk_nuts1_cover.tif`, and by their area in km², which shrinks with latitude.
@@ -148,6 +150,13 @@ cubed, times that area.
 
 Footprint cells that are `NaN` are left out. A storm with no UK cell values
 has `max_gust` `NA`, and `area_25` and `ssi` zero.
+
+`start_time` and `central_time` are read from each footprint file's header
+and written as `YYYY-MM-DD HH:MM`, in UTC. GDAL doesn't read these header
+values, so the script runs `ncdump` (from the netCDF tools in the dev shell)
+on every file. The central time is the better guide to when a storm's
+strongest gusts occurred: the start time can be days earlier, as some
+tracks last two weeks or more.
 
 It needs `unzip_footprints.sh` and `rasterize_uk.R` to have been run. An
 existing output file is not made again.

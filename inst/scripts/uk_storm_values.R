@@ -10,6 +10,10 @@
 # out. n_valid counts the UK cells with a value; a storm with none has
 # max_gust NA and area_25 zero.
 #
+# The track start time and the footprint central time (the centre of the 72h
+# window the gusts are taken over) are read from each file's header with
+# ncdump, as GDAL doesn't show them. Both are UTC, written as "YYYY-MM-DD HH:MM".
+#
 # Needs unzip_footprints.sh and rasterize_uk.R to have been run. An existing
 # output file is not made again. Run from the project root.
 
@@ -47,9 +51,23 @@ if (!file.exists(target)) {
   values <- t(vapply(files, storm, numeric(5), USE.NAMES = FALSE))
   colnames(values) <- columns
 
+  # Each time is stored as zero "days since" the time itself.
+  header_time <- function(file, variable) {
+    header <- system2("ncdump", c("-h", shQuote(file)), stdout = TRUE)
+    units <- grep(paste0("\\b", variable, ":units"), header, value = TRUE)
+    time <- as.POSIXct(sub('.*since ([^"]+)".*', "\\1", units),
+                       format = "%Y-%m-%d %H:%M:%S", tz = "UTC")
+    stopifnot(length(time) == 1, !is.na(time))
+    format(time, "%Y-%m-%d %H:%M")
+  }
+
   out <- data.frame(
     track_id = as.integer(vapply(parts, `[`, "", 3)),
     start_date = as.Date(vapply(parts, `[`, "", 2), format = "%Y%m%d"),
+    start_time = vapply(files, header_time, "", "track_start_time",
+                        USE.NAMES = FALSE),
+    central_time = vapply(files, header_time, "", "footprint_central_time",
+                          USE.NAMES = FALSE),
     values
   )
   out <- out[order(out$track_id), ]
