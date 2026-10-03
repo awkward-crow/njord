@@ -6,9 +6,15 @@
 # mean gust cubed times area. Cells count in proportion to their UK land
 # cover, and by their area in km², which shrinks with latitude.
 #
+# The highest gust is taken only over cells that are at least half UK land.
+# Cells that are mostly sea are often the windiest, and would otherwise set
+# the maximum for most storms. Area, mean gust and SSI use every cell with
+# some UK land, weighted by its cover.
+#
 # Footprint cells that are NaN (more than 1000 km from the track) are left
 # out. n_valid counts the UK cells with a value; a storm with none has
-# max_gust NA and area_25 zero.
+# area_25 zero, and a storm with no value in a cell at least half land has
+# max_gust NA.
 #
 # The track start time and the footprint central time (the centre of the 72h
 # window the gusts are taken over) are read from each file's header with
@@ -21,12 +27,14 @@ library(terra)
 
 target <- "data-raw/uk_storm_values.csv"
 threshold <- 25
+max_cover <- 0.5
 
 if (!file.exists(target)) {
   cover <- rast("data-raw/nuts/uk_nuts1_cover.tif")[["UK"]]
   uk <- which(!is.na(values(cover, mat = FALSE)))
   weight <- values(cover, mat = FALSE)[uk] *
     values(cellSize(cover, unit = "km"), mat = FALSE)[uk]
+  land <- values(cover, mat = FALSE)[uk] >= max_cover
 
   files <- list.files("data-raw/footprints/nc", pattern = "\\.nc$",
                       full.names = TRUE)
@@ -42,7 +50,7 @@ if (!file.exists(target)) {
     area <- sum(weight[above])
     mean_gust <- if (area > 0) sum(gust[above] * weight[above]) / area else NA
     c(sum(valid),
-      if (any(valid)) max(gust[valid]) else NA,
+      if (any(valid & land)) max(gust[valid & land]) else NA,
       area,
       mean_gust,
       if (area > 0) mean_gust^3 * area else 0)
