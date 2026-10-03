@@ -19,6 +19,7 @@
         rPackages.readxl
         rPackages.MASS
         rPackages.evd
+        rPackages.lubridate
 
         netcdf
         glibcLocales
