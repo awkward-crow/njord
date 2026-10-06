@@ -20,6 +20,22 @@ needed.
 **Run every script from the project root.** All paths in the scripts are
 relative to it, and all output goes to `data-raw/`.
 
+Every script except `download_era5_gust.R` behaves the same way when run:
+
+- If its output already exists, it says so and does nothing. Delete the
+  output to make it again.
+- If an input is missing, it names the input and the script that makes it,
+  and does nothing.
+- It creates directories only when it has something to write.
+- It writes each output to a `.part` file and renames it only when complete,
+  so a failed or interrupted run leaves nothing that a later run would
+  mistake for finished output.
+- It ends with a short report of what it did, or why it didn't.
+
+The R scripts report with `message()`, so the report goes to stderr. The shell
+scripts end with a line starting `OK` (exit status 0) or `PROBLEMS FOUND`
+(exit status 1), and exit 1 if an input is missing.
+
 | Script                  | Output in `data-raw/`                                              |
 |-------------------------|--------------------------------------------------------------------|
 | `download_tracks.R`     | `reanalysis_tracks_hodges.zip`                                     |
@@ -36,6 +52,16 @@ relative to it, and all output goes to `data-raw/`.
 Downloads all the storm tracks in one request. The tracks are a single CSV
 with one row per storm per 6-hour time step.
 
+It doesn't depend on the other scripts. On success it reports the name of
+the CSV in the zip (the name gives the period covered, e.g.
+`storm_track-hodges-raw-194001_202607-all-v1_0.csv`), the number of storms
+and the range of track dates. For the download on 2026-09-28 that was 1,905
+storms, 1940-02-22 to 2026-04-06.
+
+If the request fails, the error is reported. If it times out (ecmwfr gives
+up after an hour without an error), the script says nothing was written; the
+request may still be on the CDS requests page.
+
 ## download_footprints.R
 
 Downloads one footprint per storm: the maximum 10 m gust over a 72-hour
@@ -48,7 +74,14 @@ for each request holds one `.nc` file per storm. For the download on
 
 It needs the tracks zip, so run `download_tracks.R` first. A zip that already
 exists is skipped, so if the script is interrupted, running it again carries
-on where it stopped.
+on where it stopped. If every zip exists, it says so and sends no requests.
+
+A month whose request fails or times out is reported and skipped, and the
+other months carry on. The script ends with a count of the months already
+present, downloaded, failed and timed out, and lists the missing months.
+Running it again tries them again, but a timed-out request may still be
+queued on the CDS: download it from the requests page by hand, or delete it,
+before running the script again, so it isn't requested twice.
 
 ## check_footprints.sh
 
@@ -61,20 +94,26 @@ anything. It:
 3. counts the distinct track ids in the footprint filenames and lists duplicates;
 4. counts the track ids in the tracks CSV;
 5. lists tracks without a footprint and footprints without a track;
-6. compares each footprint's filename date with its track's start date.
+6. compares each footprint's filename date with its track's start date, for
+   the storms that have both.
+
+Each check that can find a problem prints a count and then lists the
+problems, indented; a date mismatch is listed as track id, footprint date,
+track start date. The last line is `OK` or `PROBLEMS FOUND` with the total.
 
 For the download on 2026-09-28, a complete download gave:
 
 ```
 zips tested: 721
-bad zips:
+bad zips: 0
 footprint files: 1905
 distinct footprint ids: 1905
-duplicate footprint ids:
+duplicate footprint ids: 0
 track ids: 1905
-tracks without footprint:
-footprints without track:
+tracks without footprint: 0
+footprints without track: 0
 date mismatches: 0
+OK: every storm has exactly one footprint, dated by its track start.
 ```
 
 ## unzip_footprints.sh
@@ -83,15 +122,21 @@ Extracts the `.nc` files from every footprint zip into
 `data-raw/footprints/nc/`, one file per storm. Run it last, once
 `check_footprints.sh` shows the download is complete.
 
-The zips are left in place. A file that already exists is not overwritten, so
-the script can be run again. It lists any zip that fails to extract.
+The zips are left in place. Only the files not already in `nc/` are
+extracted, so the script can be run again. Each zip is extracted into its
+own directory under `data-raw/footprints/nc.part/`, and its files are moved
+into `nc/` only if the whole zip extracts cleanly; the staging directory is
+removed when the script ends. A zip that can't be read or extracted is listed
+under "failed zips" and its storms under "still missing". The script checks
+file names only, not the contents of files already in `nc/`.
 
-For the download on 2026-09-28 it gave:
+Run again once all the files were extracted, it gives:
 
 ```
-failed zips:
 zips: 721
-footprint files: 1905
+footprint files in zips: 1905
+already in nc/: 1905
+OK: all 1905 footprint files in nc/.
 ```
 
 ## download_nuts.R
@@ -106,7 +151,9 @@ is also the latest NUTS version that includes the UK. The UK has 12 level 1
 regions, `UKC` to `UKN`.
 
 It doesn't depend on the other scripts. An existing file is not downloaded
-again.
+again. On success it reports the file's size and number of regions (125 for
+the file downloaded on 2026-09-30); on failure it reports the error, e.g. an
+HTTP 404.
 
 ## rasterize_uk.R
 
@@ -122,7 +169,8 @@ footprint cell centres are on quarter degrees, so the cell edges fall at .125
 and .375.
 
 It needs `download_nuts.R` and `unzip_footprints.sh` to have been run. An
-existing output file is not made again.
+existing output file is not made again. On success it reports the layers,
+the number of cells with UK land and the UK area.
 
 For the NUTS file downloaded on 2026-09-30 it gave 750 cells with some UK
 land, adding up to 538.8 whole cells. That is 244,671 km², against 244,545 km²
@@ -173,7 +221,10 @@ strongest gusts occurred: the start time can be days earlier, as some
 tracks last two weeks or more.
 
 It needs `unzip_footprints.sh` and `rasterize_uk.R` to have been run. An
-existing output file is not made again.
+existing output file is not made again. On success it reports the number of
+storms and their start dates, how many have UK values and how many have a
+`max_gust` above the threshold, and the highest `max_gust` with its track id.
+It takes about 30 seconds.
 
 For the footprints downloaded on 2026-09-28 it gave 1,905 storms. 27 have
 no UK cell values and 29 have no `max_gust`. 1,482 have a `max_gust` above
@@ -209,4 +260,8 @@ CDS website: download the finished years by hand, saving each as
 `era5_fg10_daymax_YYYY.nc`, and delete the ones still waiting. Years that
 already have a file are skipped.
 
-It doesn't depend on the other scripts.
+It doesn't depend on the other scripts. Unlike the others, it doesn't yet
+end with a report: when the loop finishes, count the files in
+`data-raw/era5_gust/` to see which years arrived. A request whose check
+fails for any reason, even a brief network error, is dropped from the loop
+with a message, though it stays on the CDS.
