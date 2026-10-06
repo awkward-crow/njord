@@ -9,6 +9,10 @@ The storm data come from the Copernicus Climate Data Store (CDS) dataset
 (Hodges tracking, 1940–2026). The scripts download it, check that the download
 is complete, and unpack it. A CDS account is required.
 
+The daily maximum gusts come from another CDS dataset,
+[`derived-era5-single-levels-daily-statistics`](https://cds.climate.copernicus.eu/datasets/derived-era5-single-levels-daily-statistics),
+with the same account.
+
 The region boundaries are the NUTS 2021 regions from
 [Eurostat GISCO](https://ec.europa.eu/eurostat/web/gisco). No account is
 needed.
@@ -25,6 +29,7 @@ relative to it, and all output goes to `data-raw/`.
 | `download_nuts.R`       | `nuts/NUTS_RG_01M_2021_4326_LEVL_1.geojson`                        |
 | `rasterize_uk.R`        | `nuts/uk_nuts1_cover.tif`                                          |
 | `uk_storm_values.R`     | `uk_storm_values.csv`, one row per storm                           |
+| `download_era5_gust.R`  | `era5_gust/era5_fg10_daymax_YYYY.nc`, one per year 1991–2020       |
 
 ## download_tracks.R
 
@@ -153,7 +158,7 @@ The highest gust is taken only over cells that are at least half UK land
 and including them would let sea gusts set the UK maximum for most storms.
 With this rule, counts of storms above 15.6, 20 and 25 m/s match the CDS
 summary indicators' UK `storms_number` closely, year by year. The cut-off
-is `max_cover` at the top of the script. Area, mean gust and SSI still use
+is `min_cover` near the end of the script. Area, mean gust and SSI still use
 every cell with some UK land, weighted by its land fraction.
 
 Footprint cells that are `NaN` are left out. A storm with no UK cell values
@@ -174,3 +179,34 @@ For the footprints downloaded on 2026-09-28 it gave 1,905 storms. 27 have
 no UK cell values and 29 have no `max_gust`. 1,482 have a `max_gust` above
 25 m/s, and 1,563 have some UK land above 25 m/s; the difference is storms
 whose gusts pass 25 m/s only in cells that are mostly sea.
+
+## download_era5_gust.R
+
+Downloads the daily maximum 10 m gust over the UK for every day from 1991 to
+2020, one file per year. These are not storm data: they are a 30-year
+reference period for working out how windy each grid cell normally is (the
+98th percentile of daily maximum gust in each cell), which some storm
+severity indices and damage functions need.
+
+The gust is the same ERA5 variable the footprints are made from, the
+maximum 10 m gust since the previous post-processing step, which is hourly.
+The daily maximum is taken over the 24 hours of each UTC day. The area is the
+UK box on the footprint grid, cell centres 8.75°W to 1.75°E and 49.75°N to
+60.75°N, and the files are on exactly the same grid as the footprints. Each
+file has one layer per day, 365 or 366. terra reads the time as a depth
+(days since 1 January), not as a time.
+
+The script sends one request per year, all at once, then checks them once a
+minute; each file is downloaded when it is ready, and the request is then
+deleted from the CDS. A year the CDS refuses is reported and skipped. But the
+CDS runs only one request per user at a time, and in October 2026 each year
+took between 40 and 90 minutes, mostly waiting in the queue, so the whole
+download takes about a day. Keep the R session open until it finishes.
+
+If the session stops, the requests stay queued on the CDS. Running the script
+again would send them a second time, so first look at your requests on the
+CDS website: download the finished years by hand, saving each as
+`era5_fg10_daymax_YYYY.nc`, and delete the ones still waiting. Years that
+already have a file are skipped.
+
+It doesn't depend on the other scripts.
