@@ -103,7 +103,7 @@ functions described below.
 ## Vulnerability model
 
 The **Schwierz et al. (2010)** damage model is used to estimate the mean
-damage ratio (MDR) as a function of wind gust speed *v*:
+damage ratio (MDR) as a function of wind gust speed $v$:
 
 $$\text{MDR}(v) = \text{MDD}(v) \times \text{PAA}(v)$$
 
@@ -292,11 +292,11 @@ reanalysis. *Quarterly Journal of the Royal Meteorological Society*,
 
 Hodges, K. I. (1995). Feature tracking on the unit sphere. *Monthly
 Weather Review*, 123(12), 3458–3465.
-<https://doi.org/10.1175/1520-0493(1995)123%3C3458:FTOTUS>2.0.CO;2\>
+[doi:10.1175/1520-0493(1995)123\<3458:FTOTUS\>2.0.CO;2](https://doi.org/10.1175/1520-0493(1995)123%3C3458:FTOTUS%3E2.0.CO;2)
 
 Hodges, K. I. (1999). Adaptive constraints for feature tracking.
 *Monthly Weather Review*, 127(6), 1362–1373.
-<https://doi.org/10.1175/1520-0493(1999)127%3C1362:ACFFT>2.0.CO;2\>
+[doi:10.1175/1520-0493(1999)127\<1362:ACFFT\>2.0.CO;2](https://doi.org/10.1175/1520-0493(1999)127%3C1362:ACFFT%3E2.0.CO;2)
 
 Klawa, M. and Ulbrich, U. (2003). A model for the estimation of storm
 losses and the identification of severe winter storms in Germany.
