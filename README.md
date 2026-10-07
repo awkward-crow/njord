@@ -7,19 +7,343 @@
 
 <!-- badges: end -->
 
-The goal of njord is to …
+**njord** is an R package for parametric windstorm trigger design and
+basis risk quantification, focusing on the UK market. It provides a
+reproducible pipeline from reanalysis hazard data through to the design
+and evaluation of index-based insurance triggers with explicit modelling
+of the gap between parametric payouts and indemnity losses.
+
+## Background
+
+Parametric (index-based) insurance pays out when a measurable physical
+index exceeds a contractual threshold rather than when a policyholder
+files a claim. For natural catastrophes such as European windstorms,
+this removes loss-adjustment delays and moral hazard but introduces
+*basis risk*: the payout may not match the insured’s actual loss either
+because the storm was severe locally but the index was low or vice
+versa. Quantifying and decomposing that gap is the central challenge in
+parametric product design.
+
+This package implements a reference workflow for a UK windstorm
+parametric trigger:
+
+1.  **Hazard** — reanalysis-derived wind gust footprints for all named
+    storms since 1940, standardised against a local climatological
+    threshold (*V98*).
+2.  **Exposure and vulnerability** — gridded asset exposure (LitPop)
+    combined with the Schwierz et al. (2010) damage model to estimate
+    indemnity losses for each storm event.
+3.  **Trigger** — a UK-wide area-weighted mean peak gust index with a
+    linear ramp payout between an attachment and exhaustion level.
+4.  **Basis risk** — the distribution of the difference between
+    parametric payout and modelled indemnity loss across the historical
+    event set and its decomposition by source.
 
 ## Data
 
-The raw hazard data comes from the Copernicus Climate Data Store and is
-not included in the package. The scripts that download it into
-`data-raw/`, and check it, are in
-[`inst/scripts/`](inst/scripts/Readme.md).
+### ERA5 windstorm reanalysis
 
-## Installation
+Hazard data come from the Copernicus Climate Change Service (C3S)
+Enhanced Windstorm Service (EWS) dataset
+(`sis-european-wind-storm-reanalysis`; van den Brink, 2019; Copernicus
+Climate Change Service, 2025), derived from the ERA5 global reanalysis
+(Hersbach et al., 2020).
 
-You can install the development version of njord like so:
+For each identified storm event the dataset provides:
+
+- **Footprints** — the maximum 3-second 10 m wind gust (m s⁻¹) on a
+  0.016° × 0.016° grid (~1.8 km) over a 72-hour window centred on the
+  storm’s peak land impact. Footprints are available at both the native
+  ERA5 resolution (0.25°) and a higher-resolution product at 0.016° ×
+  0.016° obtained by downscaling from the native ERA5 grid. Njord uses
+  the downscaled (“decontaminated”) product which restricts each
+  footprint to a 1000 km radius around the storm track to avoid
+  cross-contamination between contemporaneous events.
+
+- **Track catalogue** — 6-hourly positions, mean sea level pressure and
+  10 m gust speed at the storm centre for all tracked systems 1940–2025.
+  Two tracking algorithms are available: *Hodges* (TRACK; Hodges, 1995,
+
+  1999\) which follows 850 hPa relative vorticity and *TempestExtremes*
+  (Ullrich & Zarzycki, 2017) which tracks MSLP minima. Njord uses the
+  Hodges product. This is consistent with CLIMADA’s default
+  configuration and with Mishra et al. (2026).
+
+- **Summary indicators** — pre-computed annual storm counts, mean gust,
+  Storm Severity Index (SSI), normalised SSI, area ratio and wind gust
+  ratio, aggregated by NUTS region (NUTS0/1/2) and wind speed threshold
+  (0, 15.6, 20, 25 m s⁻¹) for 1940–2025 (~170 000 rows).
+
+The footprint archive (downloaded via the `ecmwfr` package) currently
+comprises **723 monthly zip files** (from footprints_hodges_194002.zip
+through to footprints_hodges_202604.zip) each containing one or more
+NetCDF footprint files for storms active in that calendar month.
+
+### V98 — local climatological threshold
+
+A central concept in the Klawa–Ulbrich family of windstorm damage models
+is *V98* (also written *P98*), the 98th percentile of the local 10 m
+wind gust speed distribution, computed over a reference climatological
+period. This acts as a location-specific threshold above which damage
+accumulates rapidly.
+
+The standard reference period used in the C3S EWS normalised SSI product
+and adopted here is **1991–2020** (Copernicus Climate Change Service,
+2025). Njord computes gridded V98 values for the UK directly from the
+ERA5-derived footprint ensemble: for each 0.016° grid cell, the 98th
+percentile of observed maximum gust values across all storm events in
+the reference period.
+
+The resulting V98 surface captures the spatial gradient from the exposed
+Atlantic-facing coasts (high V98) to sheltered eastern and southern
+lowlands (lower V98). It is used to normalise storm intensity for both
+the Storm Severity Index (Leckebusch et al., 2008) and the vulnerability
+functions described below.
+
+## Vulnerability model
+
+The **Schwierz et al. (2010)** damage model is used to estimate the mean
+damage ratio (MDR) as a function of wind gust speed *v*:
+
+$$\text{MDR}(v) = \text{MDD}(v) \times \text{PAA}(v)$$
+
+where MDD (mean damage degree) is the expected fraction of asset value
+destroyed given that the asset is affected and PAA (percentage of assets
+affected) is the probability that an asset at this location suffers any
+damage at all. Both are empirically derived nonlinear lookup tables,
+originally calibrated against UK insurance losses from named storms in
+the period 1987–1990 (Schwierz et al., 2010) and subsequently validated
+across multiple European countries.
+
+The model is implemented in the open-source
+[CLIMADA](https://climada-python.readthedocs.io/) platform (ETH Zurich;
+Aznar-Siguan and Bresch, 2019) as `ImpfStormEurope` with two
+calibrations available:
+
+- `from_schwierz()` — the original Schwierz et al. (2010)
+  parameterisation.
+- `from_welker()` — rescaled by a factor of 1.332518 following Welker et
+  al.
+  \(2021\) to improve agreement with Swiss Re industry loss data.
+
+Njord implements the Schwierz MDD and PAA lookup tables directly in R,
+using linear interpolation between the tabulated intensity nodes (0–100
+m s⁻¹):
 
 ``` r
-# FILL THIS IN! HOW CAN PEOPLE INSTALL YOUR DEV PACKAGE?
+schwierz_intensity <- c(0, 20, 25, 30, 35, 40, 45, 50, 55, 60, 80, 100)
+schwierz_mdd <- c(0.0, 0.0, 0.001, 0.00177515, 0.00367253, 0.00749977,
+                  0.01263556, 0.01849639, 0.02370487, 0.037253, 0.037253, 0.037253)
+schwierz_paa <- c(0.0, 0.0, 0.001, 0.00676, 0.03921, 0.10707,
+                  0.25357, 0.48869, 0.82907, 1.0, 1.0, 1.0)
+```
+
+The MDR surface is convolved with gridded asset exposure from **LitPop**
+(Eberenz et al., 2020) — a globally consistent 30 arcsec (~1 km) dataset
+that disaggregates national asset values in proportion to nightlight
+intensity × population — to yield modelled monetary losses per grid cell
+and per event. The sum across the UK grid is the event-level **indemnity
+loss benchmark**.
+
+### UK recalibration
+
+Mishra et al. (2026) recalibrate the Schwierz model against PERILS
+industry loss data (1999–2024) for 12 European countries using the
+CLIMADA framework, fitting independently with RMSE and RMSLE cost
+functions. For the UK, the RMSLE-optimal calibration yields a maximum
+MDD (MDDmax) of approximately 0.04 and a multiplicative scaling factor
+of approximately 1.07 relative to the Welker parameterisation. This
+UK-specific recalibration is planned as a sensitivity variant in njord
+(see Planned refinements below).
+
+## Reference trigger: UK-wide index
+
+The reference parametric trigger in njord is a single **UK-wide
+area-weighted mean peak gust index**, computed for each storm event as:
+
+$$I = \frac{\sum_{i} w_i \cdot v_i}{\sum_i w_i}$$
+
+where $v_i$ is the maximum 3-second gust at grid cell $i$ within the UK
+boundary and $w_i$ is the cell area weight. This is conceptually
+equivalent to the mean wind gust field in the C3S summary indicators but
+computed directly from the downscaled footprint rasters rather than from
+the pre-aggregated product.
+
+The parametric payout follows a **linear ramp** structure:
+
+$$P(I) = \begin{cases}
+0 & I < A \\
+L \cdot \dfrac{I - A}{E - A} & A \le I \le E \\
+L & I > E
+\end{cases}$$
+
+where $A$ is the attachment (trigger) level, $E$ is the exhaustion level
+and $L$ is the policy limit. The attachment and exhaustion are
+calibrated against the historical loss distribution so that the trigger
+fires at approximately the 1-in-5-year loss return period and reaches
+the limit at approximately the 1-in-20-year level.
+
+### Frequency and severity
+
+The historical storm catalogue (1940–2025) provides 85 years of event
+occurrence for the UK. Storm frequency (annual event count above a
+minimum threshold) is modelled with a **negative binomial distribution**
+which accommodates the over-dispersion observed in windstorm catalogues
+relative to a Poisson process.
+
+Storm severity (modelled indemnity loss, conditional on occurrence) is
+fitted with a **Generalised Pareto Distribution (GPD)** to the loss
+exceedances above a threshold chosen by mean excess plot inspection. The
+frequency and severity models together permit Monte Carlo simulation of
+an extended event set from which exceedance probability (EP) curves —
+both occurrence EP (OEP) and aggregate EP (AEP) — are derived for both
+indemnity losses and parametric payouts.
+
+## Basis risk
+
+For each storm event $e$, the basis risk is defined as:
+
+$$B_e = P_e - L_e$$
+
+where $P_e$ is the parametric payout and $L_e$ is the modelled indemnity
+loss (both normalised to the same reference exposure). Positive values
+indicate over-payment (the insurer pays more than the loss); negative
+values indicate under-payment (the insured bears a residual loss).
+
+The distribution of $B_e$ across the historical event set characterises
+the basis risk profile of the trigger design. Key summary statistics are
+the mean (expected value of the basis risk, which should be close to
+zero for a fair product) and the standard deviation and tail quantiles
+(which measure the variability of the mismatch).
+
+## Planned refinements
+
+The reference UK-wide trigger is deliberately simple. A number of
+refinements could be considered.
+
+### 1. Zonal trigger (NUTS1 regions)
+
+Rather than a single UK-wide index, compute a separate sub-index for
+each of the 12 UK NUTS1 regions (e.g. Scotland, North West England,
+Wales, South East England). The trigger fires if any one regional index
+exceeds its attachment. This reduces geographic basis risk — the risk
+that a storm devastates one region while the UK-wide average remains
+below the trigger threshold — at the cost of additional complexity in
+the contract specification.
+
+### 2. Multi-zone aggregate trigger
+
+Extend the zonal approach to an aggregate structure: the payout is
+triggered by a weighted sum of regional indices, with weights reflecting
+the insured exposure distribution. This is analogous to the zonal SSI
+structures used in some European cat bond transactions.
+
+### 3. Trigger shape optimisation
+
+The linear ramp is a natural starting point but not necessarily optimal.
+A step trigger (binary payout at attachment) has maximum simplicity; a
+polynomial ramp can be calibrated to match the indemnity loss curve more
+closely in the tail. The optimal shape can be found by minimising the
+basis risk variance subject to an actuarial fairness constraint using
+the historical event set as training data.
+
+### 4. Basis risk decomposition
+
+Following Bouchard and Romanic (2023), the total basis risk variance can
+be decomposed into:
+
+- **Geographic basis risk** — mismatch between the location of losses
+  and the spatial footprint measured by the trigger index.
+- **Temporal basis risk** — mismatch arising from the 72-hour
+  integration window versus the actual loss accumulation period.
+- **Structural basis risk** — residual mismatch after controlling for
+  geography and timing, attributable to differences in vulnerability
+  (e.g. industrial vs residential exposure) not captured by the damage
+  model.
+
+### 5. UK-specific vulnerability recalibration
+
+Incorporate the UK-specific Schwierz recalibration from Mishra et
+al. (2026) as a sensitivity variant, and compare the basis risk profile
+under the original Schwierz, Welker, and UK-recalibrated vulnerability
+functions. This isolates the sensitivity of basis risk estimates to the
+choice of damage model parameterisation.
+
+## References
+
+Aznar-Siguan, G. and Bresch, D. N. (2019). CLIMADA v1: a global weather
+and climate risk assessment platform. *Geoscientific Model Development*,
+12(7), 3085–3097. <https://doi.org/10.5194/gmd-12-3085-2019>
+
+Bouchard, T. and Romanic, D. (2023). Decomposing basis risk in
+parametric insurance products. *Risk Analysis*, 43(4), 812–831.
+
+Copernicus Climate Change Service (2025). *European Windstorm Service:
+sis-european-wind-storm-reanalysis*. Copernicus Climate Change Service
+(C3S) Climate Data Store. <https://doi.org/10.24381/cds.8b5d8c28>
+
+Eberenz, S., Stocker, D., Röösli, T. and Bresch, D. N. (2020). Asset
+exposure data for global physical risk assessment. *Earth System Science
+Data*, 12(2), 817–833. <https://doi.org/10.5194/essd-12-817-2020>
+
+Hersbach, H., Bell, B., Berrisford, P. et al. (2020). The ERA5 global
+reanalysis. *Quarterly Journal of the Royal Meteorological Society*,
+146(730), 1999–2049. <https://doi.org/10.1002/qj.3803>
+
+Hodges, K. I. (1995). Feature tracking on the unit sphere. *Monthly
+Weather Review*, 123(12), 3458–3465.
+<https://doi.org/10.1175/1520-0493(1995)123%3C3458:FTOTUS>2.0.CO;2\>
+
+Hodges, K. I. (1999). Adaptive constraints for feature tracking.
+*Monthly Weather Review*, 127(6), 1362–1373.
+<https://doi.org/10.1175/1520-0493(1999)127%3C1362:ACFFT>2.0.CO;2\>
+
+Klawa, M. and Ulbrich, U. (2003). A model for the estimation of storm
+losses and the identification of severe winter storms in Germany.
+*Natural Hazards and Earth System Sciences*, 3(6), 725–732.
+<https://doi.org/10.5194/nhess-3-725-2003>
+
+Leckebusch, G. C., Renggli, D. and Ulbrich, U. (2008). Development and
+application of an objective storm severity measure for the Northeast
+Atlantic region. *Meteorologische Zeitschrift*, 17(5), 575–587.
+<https://doi.org/10.1127/0941-2948/2008/0323>
+
+Mishra, A. N., Messori, G., Riedel, L., Satheesh, A. R. and Pinto, J. G.
+(2026). Improving Europe-wide windstorm damage modeling using insurance
+loss data. *EGUsphere* \[preprint\].
+<https://doi.org/10.5194/egusphere-2026-3099>
+
+Schwierz, C., Köllner-Heck, P., Zenklusen Mutter, E., Bresch, D. N.,
+Vidale, P.-L., Wild, M. and Schär, C. (2010). Modelling European winter
+wind storm losses in current and future climate. *Climatic Change*,
+101(3–4), 485–514. <https://doi.org/10.1007/s10584-009-9712-1>
+
+van den Brink, H. (2019). Description of the Enhanced Windstorm Service
+reanalysis dataset. Copernicus Climate Change Service (C3S).
+<https://doi.org/10.24381/cds.8b5d8c28>
+
+Welker, C., Röösli, T. and Bresch, D. N. (2021). Comparing an insurer’s
+perspective on building damages with modelled damages from pan-European
+winter windstorm event sets: a case study from Zurich, Switzerland.
+*Natural Hazards and Earth System Sciences*, 21(1), 279–299.
+<https://doi.org/10.5194/nhess-21-279-2021>
+
+## Development environment
+
+The package uses a [Nix flake](https://nixos.org/) to pin all system
+dependencies (R, system libraries, fonts) to a reproducible state. With
+Nix installed, enter the development shell with:
+
+``` bash
+nix develop
+```
+
+ERA5 data are downloaded via the ECMWF Climate Data Store (CDS) API
+using the [`ecmwfr`](https://bluegreen-labs.github.io/ecmwfr/) package.
+A CDS account and personal access token are required:
+
+``` r
+options(keyring_backend = "file")
+ecmwfr::wf_set_key(user = "<your-cds-uid>", key = "<your-api-key>",
+                   service = "cds")
 ```
