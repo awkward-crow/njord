@@ -13,7 +13,10 @@ License: MIT + file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.3
-Suggests: 
+Imports:
+    graphics,
+    stats
+Suggests:
     knitr,
     rmarkdown,
     testthat (>= 3.0.0)
