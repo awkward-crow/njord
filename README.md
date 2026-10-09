@@ -51,23 +51,22 @@ Climate Change Service, 2025), derived from the ERA5 global reanalysis
 
 For each identified storm event the dataset provides:
 
-- **Footprints** — the maximum 3-second 10 m wind gust (m s⁻¹) on a
-  0.016° × 0.016° grid (~1.8 km) over a 72-hour window centred on the
-  storm’s peak land impact. Footprints are available at both the native
-  ERA5 resolution (0.25°) and a higher-resolution product at 0.016° ×
-  0.016° obtained by downscaling from the native ERA5 grid. Njord uses
-  the downscaled (“decontaminated”) product which restricts each
-  footprint to a 1000 km radius around the storm track to avoid
-  cross-contamination between contemporaneous events.
+- **Footprints** — the maximum 3-second 10-metre wind gust (m s⁻¹) over
+  a 72-hour window centred on the storm’s peak land impact, on a 0.016°
+  × 0.016° grid (~1.8 km). Footprints are available at both the native
+  ERA5 resolution (0.25°) and a higher-resolution product obtained by
+  downscaling from the native ERA5 grid. Njord uses the downscaled
+  (“decontaminated”) product, which restricts each footprint to a 1000
+  km radius around the storm track to avoid cross-contamination between
+  contemporaneous events.
 
 - **Track catalogue** — 6-hourly positions, mean sea level pressure and
   10 m gust speed at the storm centre for all tracked systems 1940–2025.
-  Two tracking algorithms are available: *Hodges* (TRACK; Hodges, 1995,
-
-  1999\) which follows 850 hPa relative vorticity and *TempestExtremes*
-  (Ullrich & Zarzycki, 2017) which tracks MSLP minima. Njord uses the
-  Hodges product. This is consistent with CLIMADA’s default
-  configuration and with Mishra et al. (2026).
+  Two tracking algorithms are available: *Hodges* (TRACK; Hodges,
+  1995, 1999) which follows 850 hPa relative vorticity and
+  *TempestExtremes* which tracks MSLP minima. Njord uses the Hodges
+  product, consistent with CLIMADA’s default configuration and Mishra et
+  al. (2026).
 
 - **Summary indicators** — pre-computed annual storm counts, mean gust,
   Storm Severity Index (SSI), normalised SSI, area ratio and wind gust
@@ -82,23 +81,22 @@ NetCDF footprint files for storms active in that calendar month.
 ### V98 — local climatological threshold
 
 A central concept in the Klawa–Ulbrich family of windstorm damage models
-is *V98* (also written *P98*), the 98th percentile of the local 10 m
+is *V98* (also written *P98*), the 98th percentile of the local 10-metre
 wind gust speed distribution, computed over a reference climatological
 period. This acts as a location-specific threshold above which damage
 accumulates rapidly.
 
 The standard reference period used in the C3S EWS normalised SSI product
 and adopted here is **1991–2020** (Copernicus Climate Change Service,
-2025). Njord computes gridded V98 values for the UK directly from the
+2025). Njord computes V98 values for the UK directly from the
 ERA5-derived footprint ensemble: for each 0.016° grid cell, the 98th
 percentile of observed maximum gust values across all storm events in
 the reference period.
 
 The resulting V98 surface captures the spatial gradient from the exposed
 Atlantic-facing coasts (high V98) to sheltered eastern and southern
-lowlands (lower V98). It is used to normalise storm intensity for both
-the Storm Severity Index (Leckebusch et al., 2008) and the vulnerability
-functions described below.
+lowlands (lower V98). It is used to normalise storm intensity for the
+Storm Severity Index (Leckebusch et al., 2008).
 
 ## Vulnerability model
 
@@ -122,23 +120,10 @@ calibrations available:
 
 - `from_schwierz()` — the original Schwierz et al. (2010)
   parameterisation.
-- `from_welker()` — rescaled by a factor of 1.332518 following Welker et
-  al.
-  \(2021\) to improve agreement with Swiss Re industry loss data.
+- `from_welker()` — rescaled following Welker et al. (2021) to improve
+  agreement with Swiss Re industry loss data.
 
-Njord implements the Schwierz MDD and PAA lookup tables directly in R,
-using linear interpolation between the tabulated intensity nodes (0–100
-m s⁻¹):
-
-``` r
-schwierz_intensity <- c(0, 20, 25, 30, 35, 40, 45, 50, 55, 60, 80, 100)
-schwierz_mdd <- c(0.0, 0.0, 0.001, 0.00177515, 0.00367253, 0.00749977,
-                  0.01263556, 0.01849639, 0.02370487, 0.037253, 0.037253, 0.037253)
-schwierz_paa <- c(0.0, 0.0, 0.001, 0.00676, 0.03921, 0.10707,
-                  0.25357, 0.48869, 0.82907, 1.0, 1.0, 1.0)
-```
-
-The MDR surface is convolved with gridded asset exposure from **LitPop**
+The MDR surface is multiplied pointwise with the LitPop asset exposure
 (Eberenz et al., 2020) — a globally consistent 30 arcsec (~1 km) dataset
 that disaggregates national asset values in proportion to nightlight
 intensity × population — to yield modelled monetary losses per grid cell
@@ -151,8 +136,8 @@ Mishra et al. (2026) recalibrate the Schwierz model against PERILS
 industry loss data (1999–2024) for 12 European countries using the
 CLIMADA framework, fitting independently with RMSE and RMSLE cost
 functions. For the UK, the RMSLE-optimal calibration yields a maximum
-MDD (MDDmax) of approximately 0.04 and a multiplicative scaling factor
-of approximately 1.07 relative to the Welker parameterisation. This
+MDD of approximately 0.04 and a multiplicative scaling factor of
+approximately 1.07 relative to the Welker parameterisation. This
 UK-specific recalibration is planned as a sensitivity variant in njord
 (see Planned refinements below).
 
@@ -181,7 +166,8 @@ where $A$ is the attachment (trigger) level, $E$ is the exhaustion level
 and $L$ is the policy limit. The attachment and exhaustion are
 calibrated against the historical loss distribution so that the trigger
 fires at approximately the 1-in-5-year loss return period and reaches
-the limit at approximately the 1-in-20-year level.
+the limit at approximately the 1-in-20-year level; these are
+illustrative targets that would be negotiated in a real transaction.
 
 ### Frequency and severity
 
@@ -206,9 +192,10 @@ For each storm event $e$, the basis risk is defined as:
 $$B_e = P_e - L_e$$
 
 where $P_e$ is the parametric payout and $L_e$ is the modelled indemnity
-loss (both normalised to the same reference exposure). Positive values
-indicate over-payment (the insurer pays more than the loss); negative
-values indicate under-payment (the insured bears a residual loss).
+loss, both expressed as a fraction of total insured value. Positive
+values indicate over-payment (the insurer pays more than the loss);
+negative values indicate under-payment (the insured bears a residual
+loss).
 
 The distribution of $B_e$ across the historical event set characterises
 the basis risk profile of the trigger design. Key summary statistics are
