@@ -26,7 +26,7 @@ No account is needed.
 **Run every script from the project root.** All paths in the scripts are
 relative to it, and all output goes to `data-raw/`.
 
-Every script except `download_era5_gust.R` behaves the same way when run:
+Every script behaves the same way when run:
 
 - If its output already exists, it says so and does nothing. Delete the
   output to make it again.
@@ -51,6 +51,7 @@ and Python scripts end with a line starting `OK` (exit status 0) or
 | `download_nuts.R`       | `nuts/NUTS_RG_01M_2021_4326_LEVL_1.geojson`                        |
 | `rasterize_uk.R`        | `nuts/uk_nuts1_cover.tif`                                          |
 | `uk_storm_values.R`     | `uk_storm_values.csv`, one row per storm                           |
+| `submit_era5_gust.R`    | `era5_gust/jobs.csv`, the CDS requests waiting to be downloaded    |
 | `download_era5_gust.R`  | `era5_gust/era5_fg10_daymax_YYYY.nc`, one per year 1991–2020       |
 | `download_litpop.sh`    | `litpop/LitPop_150arcsec_GBR.hdf5`                                 |
 | `convert_litpop.py`     | `litpop/LitPop_150arcsec_GBR.csv`                                  |
@@ -239,13 +240,13 @@ no UK cell values and 29 have no `max_gust`. 1,482 have a `max_gust` above
 25 m/s, and 1,563 have some UK land above 25 m/s; the difference is storms
 whose gusts pass 25 m/s only in cells that are mostly sea.
 
-## download_era5_gust.R
+## submit_era5_gust.R
 
-Downloads the daily maximum 10 m gust over the UK for every day from 1991 to
-2020, one file per year. These are not storm data: they are a 30-year
-reference period for working out how windy each grid cell normally is (the
-98th percentile of daily maximum gust in each cell), which some storm
-severity indices and damage functions need.
+Submits the CDS requests for the daily maximum 10 m gust over the UK for
+every day from 1991 to 2020, one request per year. These are not storm
+data: they are a 30-year reference period for working out how windy each
+grid cell normally is (the 98th percentile of daily maximum gust in each
+cell), which some storm severity indices and damage functions need.
 
 The gust is the same ERA5 variable the footprints are made from, the
 maximum 10 m gust since the previous post-processing step, which is hourly.
@@ -255,24 +256,50 @@ UK box on the footprint grid, cell centres 8.75°W to 1.75°E and 49.75°N to
 file has one layer per day, 365 or 366. terra reads the time as a depth
 (days since 1 January), not as a time.
 
-The script sends one request per year, all at once, then checks them once a
-minute; each file is downloaded when it is ready, and the request is then
-deleted from the CDS. A year the CDS refuses is reported and skipped. But the
-CDS runs only one request per user at a time, and in October 2026 each year
-took between 40 and 90 minutes, mostly waiting in the queue, so the whole
-download takes about a day. Keep the R session open until it finishes.
+The script only submits the requests; `download_era5_gust.R` fetches them
+when they are ready. The CDS runs one request per user at a time, and in
+October 2026 each year took hours, mostly waiting in the queue, so the whole
+set took several days. Nobody needs to keep R open for that: submit once,
+then run the download script now and then until every year has arrived.
 
-If the session stops, the requests stay queued on the CDS. Running the script
-again would send them a second time, so first look at your requests on the
-CDS website: download the finished years by hand, saving each as
-`era5_fg10_daymax_YYYY.nc`, and delete the ones still waiting. Years that
-already have a file are skipped.
+Each request the CDS accepts is added to `era5_gust/jobs.csv` straight away,
+with its year, its CDS job URL and the time it was submitted. Years that
+already have a file, or a request in `jobs.csv`, are skipped, so running the
+script again never sends a duplicate. A year the CDS refuses is reported;
+run the script again to retry it. It ends with a count of the years present,
+already submitted, submitted now and refused. It doesn't depend on the
+other scripts.
 
-It doesn't depend on the other scripts. Unlike the others, it doesn't yet
-end with a report: when the loop finishes, count the files in
-`data-raw/era5_gust/` to see which years arrived. A request whose check
-fails for any reason, even a brief network error, is dropped from the loop
-with a message, though it stays on the CDS.
+## download_era5_gust.R
+
+Downloads the years whose requests in `era5_gust/jobs.csv` have finished,
+as `era5_gust/era5_fg10_daymax_YYYY.nc`. Run it after `submit_era5_gust.R`,
+as often as you like.
+
+For each request in `jobs.csv` whose year has no file yet, it asks the CDS
+for the request's status:
+
+- finished: downloads the file (via a `.part` file), deletes the request
+  from the CDS and removes it from `jobs.csv`;
+- failed, or no longer known to the CDS (expired, or deleted by hand):
+  reports it and removes it from `jobs.csv`, so `submit_era5_gust.R` will
+  send that year again. A failed request is left on the CDS, so the reason
+  can be read on its requests page;
+- queued or running, or the check or download failed (e.g. no network):
+  keeps it in `jobs.csv` for the next run.
+
+A year whose file is already there, e.g. downloaded by hand from the CDS
+website, has its request deleted from the CDS and removed from `jobs.csv`.
+When everything has arrived, `jobs.csv` holds only its header line.
+
+It ends with a count of the years present (and how many were downloaded
+now), waiting, failed, unknown to the CDS and still to submit, then lists
+the waiting years with their CDS status and submission time, and the years
+to give to `submit_era5_gust.R`. For example:
+
+    30 years: 6 present (3 downloaded now), 1 waiting, 0 failed, 0 unknown to the CDS, 23 to submit.
+    Waiting: 1998 (running, submitted 2026-10-10 12:00)
+    Run submit_era5_gust.R to submit 1995 1996 2000 ...
 
 ## download_litpop.sh
 
