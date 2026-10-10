@@ -1,8 +1,9 @@
 # Data scripts
 
-These scripts download the raw hazard data used by njord and the region
-boundaries used to pick out the UK, put the UK regions on the footprint
-grid, and summarise each storm's footprint over the UK.
+These scripts download the raw hazard data used by njord, the UK asset
+exposure and the region boundaries used to pick out the UK, put the UK
+regions on the footprint grid, and summarise each storm's footprint over the
+UK.
 
 The storm data come from the Copernicus Climate Data Store (CDS) dataset
 [`sis-european-wind-storm-reanalysis`](https://cds.climate.copernicus.eu/datasets/sis-european-wind-storm-reanalysis)
@@ -16,6 +17,11 @@ with the same account.
 The region boundaries are the NUTS 2021 regions from
 [Eurostat GISCO](https://ec.europa.eu/eurostat/web/gisco). No account is
 needed.
+
+The asset exposure is CLIMADA's
+[LitPop](https://climada-python.readthedocs.io/en/stable/user-guide/climada_entity_LitPop.html)
+for the UK, from the [CLIMADA data API](https://climada.ethz.ch/data-api/v2/docs).
+No account is needed.
 
 **Run every script from the project root.** All paths in the scripts are
 relative to it, and all output goes to `data-raw/`.
@@ -33,8 +39,8 @@ Every script except `download_era5_gust.R` behaves the same way when run:
 - It ends with a short report of what it did, or why it didn't.
 
 The R scripts report with `message()`, so the report goes to stderr. The shell
-scripts end with a line starting `OK` (exit status 0) or `PROBLEMS FOUND`
-(exit status 1), and exit 1 if an input is missing.
+and Python scripts end with a line starting `OK` (exit status 0) or
+`PROBLEMS FOUND` (exit status 1), and exit 1 if an input is missing.
 
 | Script                  | Output in `data-raw/`                                              |
 |-------------------------|--------------------------------------------------------------------|
@@ -46,6 +52,8 @@ scripts end with a line starting `OK` (exit status 0) or `PROBLEMS FOUND`
 | `rasterize_uk.R`        | `nuts/uk_nuts1_cover.tif`                                          |
 | `uk_storm_values.R`     | `uk_storm_values.csv`, one row per storm                           |
 | `download_era5_gust.R`  | `era5_gust/era5_fg10_daymax_YYYY.nc`, one per year 1991–2020       |
+| `download_litpop.sh`    | `litpop/LitPop_150arcsec_GBR.hdf5`                                 |
+| `convert_litpop.py`     | `litpop/LitPop_150arcsec_GBR.csv`                                  |
 
 ## download_tracks.R
 
@@ -265,3 +273,81 @@ end with a report: when the loop finishes, count the files in
 `data-raw/era5_gust/` to see which years arrived. A request whose check
 fails for any reason, even a brief network error, is dropped from the loop
 with a message, though it stays on the CDS.
+
+## download_litpop.sh
+
+Downloads CLIMADA's LitPop asset exposure for the UK: LitPop v3 with
+exponents (1,1), i.e. nightlights × population, scaled to produced capital
+(`fin_mode` pc) in USD, at 150 arcsec (about 0.042°; about 4.6 km north–south
+by 2.7–3.0 km east–west over the UK), made with CLIMADA v4.1.1 in June 2022.
+The file is 2.5 MB.
+
+CLIMADA lists its files through its data API, not as a directory that can be
+browsed; this one was found with
+
+    https://climada.ethz.ch/data-api/v2/dataset/?data_type=litpop&country_iso3alpha=GBR&status=active
+
+The file is a pandas table in HDF5, one row per point, not a raster;
+`convert_litpop.py` turns it into a CSV.
+
+It doesn't depend on the other scripts. The download is checked against the
+size the API gives, 2,571,888 bytes; a file of the wrong size is not kept.
+
+## convert_litpop.py
+
+Writes the LitPop points to a CSV with three columns: `latitude`,
+`longitude` (the cell centre, in degrees) and `value` (USD). It needs
+`download_litpop.sh` to have been run.
+
+The HDF5 file is a pandas table stored under the key `exposures`. Besides
+`value`, `latitude` and `longitude` it has `region_id`, `impf_` and a
+`geometry` column of pickled shapely points. Reading it with
+`pandas.read_hdf()` would unpickle the geometry, which needs shapely, so the
+script uses PyTables alone and reads only the block of the table that holds
+the three numeric columns. It first checks that the block holds exactly
+`value`, `latitude` and `longitude`, with one row per point, and stops if
+not.
+
+The coordinates in the file are rounded to 8 decimal places; they are the
+centres of a 150 arcsec grid whose cell edges fall on multiples of 1/24°, so
+each 0.25° footprint cell holds exactly 6 × 6 LitPop cells. They are
+WGS 84 latitude/longitude (coordinate reference system EPSG:4326), as
+recorded in the HDF5 file; the CSV doesn't record it. A file that can't
+be read, or has no `exposures` table, is reported with the error.
+
+For the file of 2022-06-26 it gave:
+
+```
+points: 19349
+value total: 9,471,908,198,426 USD
+zero values: 4
+latitude: 49.97916667 to 60.8125
+longitude: -8.60416667 to 1.72916667
+OK: data-raw/litpop/LitPop_150arcsec_GBR.csv
+```
+
+The westernmost points are St Kilda; the westernmost in Northern Ireland are
+at 8.15°W, in Fermanagh.
+
+### Python packages
+
+Python is not in the project's Nix flake. The script needs Python 3 with:
+
+- `tables` (PyTables), which also installs `numpy`
+
+It was tested with Python 3.14, tables 3.11.1 and numpy 2.5.3.
+
+How to install it is up to you. One way is a virtual environment in
+`data-raw/litpop/`, which git ignores:
+
+```sh
+python3 -m venv data-raw/litpop/.venv
+data-raw/litpop/.venv/bin/pip install tables
+```
+
+Then run the script with that Python, from the project root; the
+environment doesn't need activating:
+
+```sh
+data-raw/litpop/.venv/bin/python inst/scripts/convert_litpop.py
+```
