@@ -62,13 +62,11 @@ reanalysis (Hersbach et al., 2020).
 For each identified storm event the dataset provides:
 
 - **Footprints** — the maximum 3-second 10-metre wind gust (m s⁻¹) over a
-  72-hour window centred on the storm's peak land impact, on a
-  0.016° × 0.016° grid (~1.8 km). Footprints are available at both the
-  native ERA5 resolution (0.25°) and a higher-resolution product obtained by
-  downscaling from the native ERA5 grid. Njord uses the downscaled
-  ("decontaminated") product, which restricts each footprint to a 1000 km
-  radius around the storm track to avoid cross-contamination between
-  contemporaneous events.
+  72-hour window centred on the storm's peak land impact, 
+  on a 0.25° × 0.25° grid (~28 km). Njord uses the native ERA5 
+  resolution (0.25°) product. Each footprint is restricted to a 
+  1000 km radius around the storm track to avoid 
+  cross-contamination between contemporaneous events.
 
 - **Track catalogue** — 6-hourly positions, mean sea level pressure and
   10 m gust speed at the storm centre for all tracked systems 1940–2025.
