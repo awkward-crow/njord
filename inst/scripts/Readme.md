@@ -1,14 +1,19 @@
 # Data scripts
 
-These scripts download the raw hazard data used by njord, the UK asset
-exposure and the region boundaries used to pick out the UK, put the UK
-regions on the footprint grid, summarise each storm's footprint over the UK,
-and run Storm Ciara through from footprint to loss.
+These scripts:
+
+- download the raw hazard data used by njord, the UK asset exposure and the
+  region boundaries used to pick out the UK;
+- put the UK regions on the footprint grid;
+- summarise each storm's footprint over the UK;
+- run Storm Ciara through from footprint to loss;
+- write the small extracts that the Storm Ciara article reads from
+  `inst/extdata/`.
 
 The storm data come from the Copernicus Climate Data Store (CDS) dataset
 [`sis-european-wind-storm-reanalysis`](https://cds.climate.copernicus.eu/datasets/sis-european-wind-storm-reanalysis)
 (Hodges tracking, 1940–2026). The scripts download it, check that the download
-is complete, and unpack it. A CDS account is required.
+is complete and unpack it. A CDS account is required.
 
 The daily maximum gusts come from another CDS dataset,
 [`derived-era5-single-levels-daily-statistics`](https://cds.climate.copernicus.eu/datasets/derived-era5-single-levels-daily-statistics),
@@ -24,7 +29,8 @@ for the UK, from the [CLIMADA data API](https://climada.ethz.ch/data-api/v2/docs
 No account is needed.
 
 **Run every script from the project root.** All paths in the scripts are
-relative to it, and all output goes to `data-raw/`.
+relative to it, and all output goes to `data-raw/`, except that
+`prepare_extdata.R` writes to `inst/extdata/`.
 
 Every script behaves the same way when run:
 
@@ -56,6 +62,7 @@ and Python scripts end with a line starting `OK` (exit status 0) or
 | `download_litpop.sh`    | `litpop/LitPop_150arcsec_GBR.hdf5`                                 |
 | `convert_litpop.py`     | `litpop/LitPop_150arcsec_GBR.csv`                                  |
 | `ciara_demo.R`          | nothing; prints a report                                           |
+| `prepare_extdata.R`     | nothing; writes three rasters to `inst/extdata/`                   |
 
 ## download_tracks.R
 
@@ -412,3 +419,34 @@ Modelled loss 0.460 USD bn (Schwierz, mdd_scale 0.8).
 
 The loss is proportional to `mdd_scale`: the unscaled curve gives 0.575 USD
 bn.
+
+## prepare_extdata.R
+
+Writes the three small rasters that the Storm Ciara article
+(`vignettes/articles/ciara.Rmd`) reads to `inst/extdata/`, so that the
+article runs from the package alone, without `data-raw/`:
+
+- `ciara_footprint_uk.tif` — the Ciara footprint (track 1758), maximum gust
+  in m/s.
+- `uk_nuts1_cover.tif` — the UK land fraction of each cell, the layers of the
+  cover raster from `rasterize_uk.R`.
+- `uk_litpop_025deg.tif` — the LitPop assets in USD, 6 × 6 LitPop cells
+  summed to each 0.25° cell.
+
+All three are cropped to the extent of the summed LitPop raster, longitude
+−8.875 to 1.875 and latitude 49.625 to 60.875, which is 43 × 45 cells. The
+footprint and the cover have to be cropped together, because `uk_weights()`
+returns cell numbers on the cover's grid and `compute_index()` uses them on
+the footprint's.
+
+It needs the same inputs as `ciara_demo.R`. As a check, it ends by computing
+the trigger index from the new files, which should match `ciara_demo.R`. For
+the files above it gave:
+
+```
+Written:
+  ciara_footprint_uk.tif    11.9 kB
+  uk_nuts1_cover.tif        14.3 kB
+  uk_litpop_025deg.tif       5.3 kB
+Index from these files: 31.34 m/s over 750 cells (ciara_demo.R gives 31.34 over 750).
+```
