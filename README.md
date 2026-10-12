@@ -113,13 +113,8 @@ across multiple European countries.
 
 The model is implemented in the open-source
 [CLIMADA](https://climada-python.readthedocs.io/) platform (ETH Zurich;
-Aznar-Siguan and Bresch, 2019) as `ImpfStormEurope` with two
-calibrations available:
-
-- `from_schwierz()` — the original Schwierz et al. (2010)
-  parameterisation.
-- `from_welker()` — rescaled following Welker et al. (2021) to improve
-  agreement with Swiss Re industry loss data.
+Aznar-Siguan and Bresch, 2019) as `ImpfStormEurope.from_schwierz()`;
+njord uses the same curve nodes (`schwierz_mdr()`).
 
 The MDR surface is multiplied pointwise with the LitPop asset exposure
 (Eberenz et al., 2020) — a globally consistent 30 arcsec (~1 km) dataset
@@ -131,13 +126,17 @@ loss benchmark**.
 ### UK recalibration
 
 Mishra et al. (2026) recalibrate the Schwierz model against PERILS
-industry loss data (1999–2024) for 12 European countries using the
-CLIMADA framework, fitting independently with RMSE and RMSLE cost
-functions. For the UK, the RMSLE-optimal calibration yields a maximum
-MDD of approximately 0.04 and a multiplicative scaling factor of
-approximately 1.07 relative to the Welker parameterisation. This
-UK-specific recalibration is planned as a sensitivity variant in njord
-(see Planned refinements below).
+industry loss data (1999–2024) for 12 European countries using CLIMADA,
+with the same hazard (C3S EWS footprints) and exposure (LitPop) as
+njord. One parameter is fitted per country: the MDD curve is multiplied
+by a common factor and the PAA is left unchanged. The fit is made
+separately with RMSE and RMSLE cost functions. RMSE is driven by the
+largest events and fits the tail; RMSLE fits the frequent, mid-range
+events. For the UK both lower the curve: the maximum MDD is about 0.030
+(RMSE) and 0.033 (RMSLE), against 0.0373 for the original, factors of
+about 0.8 and 0.88. The paper gives these only in a figure (Fig. 3m–n),
+so the factors are read by eye. njord uses `mdd_scale = 0.8`, the RMSE
+fit, since the trigger is concerned with the tail.
 
 ## Reference trigger: UK-wide index
 
@@ -246,13 +245,12 @@ be decomposed into:
   (e.g. industrial vs residential exposure) not captured by the damage
   model.
 
-### 5. UK-specific vulnerability recalibration
+### 5. Vulnerability sensitivity
 
-Incorporate the UK-specific Schwierz recalibration from Mishra et
-al. (2026) as a sensitivity variant, and compare the basis risk profile
-under the original Schwierz, Welker, and UK-recalibrated vulnerability
-functions. This isolates the sensitivity of basis risk estimates to the
-choice of damage model parameterisation.
+Compare the basis risk under `mdd_scale` 1 (original), 0.8 (RMSE) and
+0.88 (RMSLE). A single MDD factor scales every storm’s loss alike, so
+the attachment and exhaustion from `calibrate_trigger()` do not change;
+only the size of losses against payouts does.
 
 ## References
 
@@ -306,12 +304,6 @@ wind storm losses in current and future climate. *Climatic Change*,
 van den Brink, H. (2019). Description of the Enhanced Windstorm Service
 reanalysis dataset. Copernicus Climate Change Service (C3S).
 <https://doi.org/10.24381/cds.8b5d8c28>
-
-Welker, C., Röösli, T. and Bresch, D. N. (2021). Comparing an insurer’s
-perspective on building damages with modelled damages from pan-European
-winter windstorm event sets: a case study from Zurich, Switzerland.
-*Natural Hazards and Earth System Sciences*, 21(1), 279–299.
-<https://doi.org/10.5194/nhess-21-279-2021>
 
 ## Development environment
 

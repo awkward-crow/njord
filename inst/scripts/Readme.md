@@ -389,11 +389,13 @@ step, and writes nothing.
 It first gives the trigger index, the UK mean gust: the footprint gust
 averaged over the 750 cells with UK land, each weighted by its land cover and
 the cosine of its latitude (`uk_weights()`, `compute_index()`). It then
-gives the loss to UK assets under the three vulnerability curves
-(`schwierz_mdr()`, `welker_mdr()`, `uk_mdr()`). The LitPop exposure is summed
-to the footprint grid, 6 × 6 LitPop cells to each footprint cell, which keeps
-the total exactly, and both gusts and assets are restricted to the cells with
-UK land, so the curves are not applied to sea cells. Losses are in USD.
+gives the loss to UK assets under the Schwierz vulnerability curve
+(`schwierz_mdr()`) with the mean damage degree scaled by `mdd_scale = 0.8`,
+the UK calibration against PERILS losses with the RMSE cost function, read
+from Fig. 3n of Mishra et al. (2026). The LitPop exposure is summed to the
+footprint grid, 6 × 6 LitPop cells to each footprint cell, which keeps the
+total exactly, and both gusts and assets are restricted to the cells with UK
+land, so the curve is not applied to sea cells. Losses are in USD.
 
 It needs `unzip_footprints.sh` and `rasterize_uk.R` to have been run, and for
 the losses `download_litpop.sh` and `convert_litpop.py`. Without the LitPop
@@ -405,13 +407,8 @@ For the files above it gave:
 ```
 Storm Ciara (track 1758): UK mean gust index 31.34 m/s, over 750 cells with UK land.
 UK assets 9472 USD bn; highest UK gust 38.4 m/s.
-Modelled loss (USD bn):
-  Schwierz   0.575
-  Welker     1.021
-  UK         0.615
+Modelled loss 0.460 USD bn (Schwierz, mdd_scale 0.8).
 ```
 
-Welker is 1.78 times Schwierz, 1.332518²: it scales both the mean damage
-degree and the share of assets affected, and Ciara's gusts stay well below
-the 53.9 m/s at which the scaled share reaches 1. UK is 1.07 times Schwierz,
-as only the mean damage degree is scaled.
+The loss is proportional to `mdd_scale`: the unscaled curve gives 0.575 USD
+bn.

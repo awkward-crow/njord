@@ -4,16 +4,13 @@
 \alias{schwierz_mdr}
 \title{Schwierz windstorm vulnerability curve}
 \usage{
-schwierz_mdr(v, mdd_scale, paa_scale)
+schwierz_mdr(v, mdd_scale)
 }
 \arguments{
 \item{v}{Maximum gust speed (m/s).}
 
 \item{mdd_scale}{Factor applied to the mean damage degree (1 for the
 original curve).}
-
-\item{paa_scale}{Factor applied to the percentage of affected assets (1
-for the original curve).}
 }
 \value{
 Mean damage ratio, one value per element of \code{v}.
@@ -27,9 +24,6 @@ maximum gust speed, after Schwierz et al. (2010),
 linearly, and held constant beyond 0 and 100 m/s. MDR = MDD x PAA.
 }
 \details{
-The scaled PAA is clipped at 1, as in CLIMADA's calibration. CLIMADA first
-resamples the curve to 131 evenly spaced points, which smooths the bends
-at 25, 35, 45 and 55 m/s; here the nodes are scaled directly, so the two
-differ by up to about 1.4\% within 0.4 m/s of those bends. See Welker et
-al. (2021) for details of the calibration.
+Only the MDD is scaled, as in the country calibrations of Mishra et al.
+(2026), \doi{10.5194/egusphere-2026-3099}.
 }
