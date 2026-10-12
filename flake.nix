@@ -20,6 +20,10 @@
         rPackages.MASS
         rPackages.evd
         rPackages.lubridate
+        rPackages.ggplot2
+        rPackages.tidyterra
+        rPackages.rnaturalearth
+        rPackages.rnaturalearthdata
 
         netcdf
         glibcLocales

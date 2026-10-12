@@ -19,9 +19,13 @@ Imports:
     terra,
     utils
 Suggests:
+    ggplot2,
     knitr,
     rmarkdown,
-    testthat (>= 3.0.0)
+    rnaturalearth,
+    rnaturalearthdata,
+    testthat (>= 3.0.0),
+    tidyterra
 Config/testthat/edition: 3
 VignetteBuilder: knitr
 Config/Needs/website: rmarkdown
