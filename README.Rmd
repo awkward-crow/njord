@@ -37,9 +37,9 @@ decomposing that gap is the central challenge in parametric product design.
 This package implements a reference workflow for a UK windstorm parametric
 trigger:
 
-1. **Hazard** — reanalysis-derived wind gust footprints for all named storms
-   since 1940, standardised against a local climatological threshold
-   (*V98*).
+1. **Hazard** — reanalysis-derived wind gust footprints for all named storms 
+   since 1940, giving the maximum 3-second 10-metre gust (m s⁻¹) at each grid 
+   cell over a 72-hour window centred on the storm’s peak land impact.
 2. **Exposure and vulnerability** — gridded asset exposure (LitPop) combined
    with the Schwierz et al. (2010) damage model to estimate indemnity losses
    for each storm event.
@@ -84,24 +84,6 @@ The footprint archive (downloaded via the `ecmwfr` package) currently
 comprises **723 monthly zip files** (from footprints_hodges_194002.zip through to
 footprints_hodges_202604.zip) each containing one or more NetCDF footprint
 files for storms active in that calendar month.
-
-### V98 — local climatological threshold
-
-A central concept in the Klawa–Ulbrich family of windstorm damage models is
-*V98* (also written *P98*), the 98th percentile of the local 10-metre wind
-gust speed distribution, computed over a reference climatological period. This
-acts as a location-specific threshold above which damage accumulates rapidly.
-
-The standard reference period used in the C3S EWS normalised SSI product
-and adopted here is **1991–2020** (Copernicus Climate Change Service, 2025).
-Njord computes V98 values for the UK directly from the ERA5-derived
-footprint ensemble: for each 0.016° grid cell, the 98th percentile of
-observed maximum gust values across all storm events in the reference period.
-
-The resulting V98 surface captures the spatial gradient from the exposed
-Atlantic-facing coasts (high V98) to sheltered eastern and southern lowlands
-(lower V98). It is used to normalise storm intensity for the Storm Severity
-Index (Leckebusch et al., 2008).
 
 ## Vulnerability model
 
@@ -153,7 +135,7 @@ $$I = \frac{\sum_{i} w_i \cdot v_i}{\sum_i w_i}$$
 where $v_i$ is the maximum 3-second gust at grid cell $i$ within the UK
 boundary and $w_i$ is the cell area weight. This is conceptually equivalent
 to the mean wind gust field in the C3S summary indicators but computed
-directly from the downscaled footprint rasters rather than from the
+directly from the footprint rasters rather than from the
 pre-aggregated product.
 
 The parametric payout follows a **linear ramp** structure:
@@ -165,27 +147,11 @@ L & I > E
 \end{cases}$$
 
 where $A$ is the attachment (trigger) level, $E$ is the exhaustion level and
-$L$ is the policy limit. The attachment and exhaustion are calibrated against
-the historical loss distribution so that the trigger fires at approximately
-the 1-in-5-year loss return period and reaches the limit at approximately the
-1-in-20-year level; these are illustrative targets that would be negotiated
-in a real transaction.
-
-### Frequency and severity
-
-The historical storm catalogue (1940–2025) provides 85 years of event
-occurrence for the UK. Storm frequency (annual event count above a minimum
-threshold) is modelled with a **negative binomial distribution** which
-accommodates the over-dispersion observed in windstorm catalogues relative to
-a Poisson process.
-
-Storm severity (modelled indemnity loss, conditional on occurrence) is fitted
-with a **Generalised Pareto Distribution (GPD)** to the loss exceedances
-above a threshold chosen by mean excess plot inspection. The frequency and
-severity models together permit Monte Carlo simulation of an extended event
-set from which exceedance probability (EP) curves — both occurrence EP (OEP)
-and aggregate EP (AEP) — are derived for both indemnity losses and parametric
-payouts.
+$L$ is the policy limit. The attachment and exhaustion are designed to be
+calibrated against the historical loss distribution so that the trigger fires
+at approximately the 1-in-5-year loss return period and reaches the limit at
+approximately the 1-in-20-year level; these are illustrative targets that would
+be negotiated in a real transaction.
 
 ## Basis risk
 
@@ -253,6 +219,32 @@ Compare the basis risk under `mdd_scale` 1 (original), 0.8 (RMSE) and 0.88
 (RMSLE). A single MDD factor scales every storm's loss alike, so the
 attachment and exhaustion from `calibrate_trigger()` do not change; only the
 size of losses against payouts does.
+
+### 6. SSI-based trigger
+
+Rather than a mean gust index, the trigger could be based on the Storm
+Severity Index (Leckebusch et al., 2008):
+
+$$\text{SSI} = \sum_i \left(\frac{v_i}{V98_i} - 1\right)^3 w_i$$
+
+where the sum is over grid cells where $v_i > V98_i$ and $V98_i$ is the
+98th percentile of the local gust distribution over a reference
+climatological period (1991–2020). The SSI is more sensitive to extreme
+local gusts than the area-weighted mean and better reflects the nonlinear
+nature of wind damage. Computing it requires a V98 surface derived from
+the footprint ensemble, which is preparatory work not yet complete.
+
+### 7. Frequency–severity model and EP curves
+
+A complete probabilistic view of the trigger requires modelling storm frequency
+and severity separately. Storm frequency (annual event count above a minimum
+gust threshold) would be fitted with a negative binomial distribution to
+accommodate over-dispersion relative to a Poisson process. Storm severity
+(modelled loss conditional on occurrence) would be fitted with a Generalised
+Pareto Distribution to the exceedances above a threshold chosen by mean excess
+plot inspection. Together these permit Monte Carlo simulation of an extended
+event set from which occurrence and aggregate exceedance probability curves can
+be derived for both indemnity losses and parametric payouts.
 
 ## References
 
