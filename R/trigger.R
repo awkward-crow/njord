@@ -6,8 +6,8 @@
 #' once, before a loop over storms with [compute_index()].
 #'
 #' @param cover_path Path to the cover raster written by
-#'   `inst/scripts/rasterize_uk.R`; its layer `UK` is the fraction of each
-#'   0.25 degree footprint cell that is UK land, NA outside the UK.
+#'   `inst/scripts/data-raw/rasterize_uk.R`; its layer `UK` is the fraction
+#'   of each 0.25 degree footprint cell that is UK land, NA outside the UK.
 #' @return A list: `idx`, the cell numbers with UK cover, and `weight`, the
 #'   weight of each of those cells.
 #' @export
