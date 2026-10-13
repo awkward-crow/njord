@@ -59,7 +59,7 @@ if (any(file.exists(out))) {
   write_part(crop(rast(footprint_file), assets), out[["footprint"]])
   write_part(crop(rast(cover_file), assets), out[["cover"]])
   wts <- uk_weights(out[["cover"]])
-  index <- compute_index(out[["footprint"]], wts)
+  index <- uk_mean_gust_index(out[["footprint"]], wts)
   message("Written:\n",
           paste(sprintf("  %-24s %5.1f kB", basename(out),
                         file.size(out) / 1e3), collapse = "\n"),

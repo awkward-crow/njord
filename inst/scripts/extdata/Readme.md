@@ -26,7 +26,7 @@ article runs from the package alone, without `data-raw/`:
 All three are cropped to the extent of the summed LitPop raster, longitude
 −8.875 to 1.875 and latitude 49.625 to 60.875, which is 43 × 45 cells. The
 footprint and the cover have to be cropped together, because `uk_weights()`
-returns cell numbers on the cover's grid and `compute_index()` uses them on
+returns cell numbers on the cover's grid and `uk_mean_gust_index()` uses them on
 the footprint's.
 
 It needs `unzip_footprints.sh`, `rasterize_uk.R`, `download_litpop.sh` and

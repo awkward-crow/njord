@@ -18,7 +18,7 @@ modelled loss.
 
 It first gives the trigger index, the UK mean gust: the footprint gust
 averaged over the 750 cells with UK land, each weighted by its land cover and
-the cosine of its latitude (`uk_weights()`, `compute_index()`). It then
+the cosine of its latitude (`uk_weights()`, `uk_mean_gust_index()`). It then
 gives the loss to UK assets under the Schwierz vulnerability curve
 (`schwierz_mdr()`) with the mean damage degree scaled by `mdd_scale = 0.8`,
 the UK calibration against PERILS losses with the RMSE cost function, read

@@ -34,7 +34,7 @@ if (!file.exists(footprint_file)) {
           file.path(data_raw_scripts, "rasterize_uk.R"), " first.")
 } else {
   wts <- uk_weights(cover_file)
-  index <- compute_index(footprint_file, wts)
+  index <- uk_mean_gust_index(footprint_file, wts)
   message("Storm Ciara (track 1758): UK mean gust index ", round(index, 2),
           " m/s, over ", length(wts$idx), " cells with UK land.")
   if (!file.exists(litpop_file)) {

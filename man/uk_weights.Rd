@@ -19,5 +19,5 @@ weight of each of those cells.
 Cells of the footprint grid that cover some UK land, and their weights
 for an area-weighted mean: the UK land cover fraction times the cosine of
 the cell's latitude, which is proportional to the cell's area. Computed
-once, before a loop over storms with \code{\link[=compute_index]{compute_index()}}.
+once, before a loop over storms with \code{\link[=uk_mean_gust_index]{uk_mean_gust_index()}}.
 }

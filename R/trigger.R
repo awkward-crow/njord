@@ -3,7 +3,7 @@
 #' Cells of the footprint grid that cover some UK land, and their weights
 #' for an area-weighted mean: the UK land cover fraction times the cosine of
 #' the cell's latitude, which is proportional to the cell's area. Computed
-#' once, before a loop over storms with [compute_index()].
+#' once, before a loop over storms with [uk_mean_gust_index()].
 #'
 #' @param cover_path Path to the cover raster written by
 #'   `inst/scripts/data-raw/rasterize_uk.R`; its layer `UK` is the fraction
@@ -29,7 +29,7 @@ uk_weights <- function(cover_path = "data-raw/nuts/uk_nuts1_cover.tif") {
 #' @param wts The list returned by [uk_weights()].
 #' @return The weighted mean gust (m/s).
 #' @export
-compute_index <- function(nc_path, wts) {
+uk_mean_gust_index <- function(nc_path, wts) {
   v <- terra::values(terra::rast(nc_path), mat = FALSE)[wts$idx]
   sum(v * wts$weight, na.rm = TRUE) / sum(wts$weight[!is.na(v)])
 }

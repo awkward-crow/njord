@@ -2,9 +2,9 @@
 
 export(basis_risk)
 export(calibrate_trigger)
-export(compute_index)
 export(load_litpop_uk)
 export(payout)
 export(plot_vulnerability_curve)
 export(schwierz_mdr)
+export(uk_mean_gust_index)
 export(uk_weights)
