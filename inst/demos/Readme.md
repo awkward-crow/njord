@@ -27,12 +27,11 @@ footprint grid, 6 × 6 LitPop cells to each footprint cell, which keeps the
 total exactly, and both gusts and assets are restricted to the cells with UK
 land, so the curve is not applied to sea cells. Losses are in USD.
 
-It needs `unzip_footprints.sh` and `rasterize_uk.R` from
-`inst/scripts/data-raw/` to have been run, and for the losses
-`download_litpop.sh` and `convert_litpop.py`. Without the LitPop CSV it gives
-the index only.
+It reads the three rasters in `inst/extdata/` written by
+`inst/scripts/extdata/prepare_extdata.R`, so it runs from a checkout without
+`data-raw/` or a CDS account.
 
-With the data from the data-raw scripts, it gave:
+It gives:
 
 ```
 Storm Ciara (track 1758): UK mean gust index 31.34 m/s, over 750 cells with UK land.

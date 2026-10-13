@@ -32,12 +32,13 @@ the footprint's.
 It needs `unzip_footprints.sh`, `rasterize_uk.R`, `download_litpop.sh` and
 `convert_litpop.py` from `inst/scripts/data-raw/` to have been run. As a
 check, it ends by computing the trigger index from the new files, which
-should match `inst/demos/ciara_demo.R`. For the files above it gave:
+should match the index from the full footprint in `data-raw/`. For the files
+above it gave:
 
 ```
 Written:
   ciara_footprint_uk.tif    11.9 kB
   uk_nuts1_cover.tif        14.3 kB
   uk_litpop_025deg.tif       5.3 kB
-Index from these files: 31.34 m/s over 750 cells (inst/demos/ciara_demo.R gives 31.34 over 750).
+Index from these files: 31.34 m/s over 750 cells (the full footprint gives 31.34 over 750).
 ```

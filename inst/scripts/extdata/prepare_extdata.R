@@ -64,6 +64,6 @@ if (any(file.exists(out))) {
           paste(sprintf("  %-24s %5.1f kB", basename(out),
                         file.size(out) / 1e3), collapse = "\n"),
           "\nIndex from these files: ", round(index, 2), " m/s over ",
-          length(wts$idx), " cells (inst/demos/ciara_demo.R gives 31.34 ",
-          "over 750).")
+          length(wts$idx), " cells (the full footprint gives 31.34 over ",
+          "750).")
 }
