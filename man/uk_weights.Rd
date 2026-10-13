@@ -8,8 +8,8 @@ uk_weights(cover_path = "data-raw/nuts/uk_nuts1_cover.tif")
 }
 \arguments{
 \item{cover_path}{Path to the cover raster written by
-\code{inst/scripts/rasterize_uk.R}; its layer \code{UK} is the fraction of each
-0.25 degree footprint cell that is UK land, NA outside the UK.}
+\code{inst/scripts/data-raw/rasterize_uk.R}; its layer \code{UK} is the fraction
+of each 0.25 degree footprint cell that is UK land, NA outside the UK.}
 }
 \value{
 A list: \code{idx}, the cell numbers with UK cover, and \code{weight}, the
