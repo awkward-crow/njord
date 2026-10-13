@@ -6,11 +6,12 @@ their inputs from `data-raw/`, so the [data-raw scripts](../data-raw/Readme.md)
 have to have been run first. See the [scripts Readme](../Readme.md) for how
 every script behaves when run.
 
-| Script              | Output in `inst/extdata/`                                         |
-|---------------------|-------------------------------------------------------------------|
-| `prepare_extdata.R` | `ciara_footprint_uk.tif`, `uk_nuts1_cover.tif`, `uk_litpop_025deg.tif` |
-| `uk_storm_values.R` | `uk_storm_values.csv`, one row per storm                           |
-| `uk_storm_losses.R` | `uk_storm_losses.csv`, one row per storm                           |
+| Script                     | Output in `inst/extdata/`                                              |
+|----------------------------|------------------------------------------------------------------------|
+| `prepare_extdata.R`        | `ciara_footprint_uk.tif`, `uk_nuts1_cover.tif`, `uk_litpop_025deg.tif` |
+| `uk_storm_values.R`        | `uk_storm_values.csv`, one row per storm                               |
+| `uk_storm_losses.R`        | `uk_storm_losses.csv`, one row per storm                               |
+| `uk_mean_gust_catalogue.R` | `uk_mean_gust_catalogue.csv`, one row per storm                        |
 
 ## prepare_extdata.R
 
@@ -136,3 +137,40 @@ Wrote inst/extdata/uk_storm_losses.csv: 1905 storms, 1828 with a loss. The large
 Of the 1,828 storms with a loss, 800 lose more than 1 million USD, 70 more
 than 100 million and 4 more than 1 billion. The largest, track 1070, is the
 Burns' Day storm of 25 January 1990.
+
+## uk_mean_gust_catalogue.R
+
+Computes each storm's trigger index, the UK mean gust. The output is a CSV
+with one row per storm:
+
+| Column         | Meaning                                                  |
+|----------------|----------------------------------------------------------|
+| `track_id`     | the storm's track id, from the footprint filename        |
+| `uk_mean_gust` | the UK mean gust (m/s), from `uk_mean_gust()`            |
+
+The index is the footprint gust averaged over the cells with UK land,
+weighted by their UK land fraction and their area, as in
+`inst/demos/ciara_demo.R`. Each footprint is cropped to the grid of the
+rasters in `inst/extdata/`, and the weights come from `uk_nuts1_cover.tif`,
+so every storm uses the same 750 cells and weights as the demos. Cropping
+doesn't change the index: for a sample of 52 storms it matched
+`uk_mean_gust_index()` on the full footprints to within 1e-13 m/s.
+
+Footprint cells that are `NaN` are left out. A storm with no UK cell values
+has no index; the script counts these as `NaN`, and `write.csv()` writes
+them as `NA`.
+
+It needs `unzip_footprints.sh` from `inst/scripts/data-raw/` and
+`prepare_extdata.R` to have been run. It checks that the first footprint,
+cropped, is on the grid of the cover raster. An existing output file is not
+made again. On success it reports the number of storms, how many have no UK
+values, the highest index with its track id and Ciara's index, which should
+match the demo. It takes about 20 seconds.
+
+For the footprints downloaded on 2026-09-28 it gave:
+
+```
+Wrote inst/extdata/uk_mean_gust_catalogue.csv: 1905 storms, 27 with no UK values (NaN). The highest is 32.84 m/s (track 531); Ciara (track 1758) 31.34 m/s, which should be 31.34.
+```
+
+The highest, track 531, has its central time on 5 March 1967.

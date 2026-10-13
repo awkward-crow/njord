@@ -19,17 +19,30 @@ uk_weights <- function(cover_path = "data-raw/nuts/uk_nuts1_cover.tif") {
        weight = cos(terra::yFromCell(cover, idx) * pi / 180) * share[idx])
 }
 
-#' UK-wide mean gust of one storm
+#' UK-wide mean gust
 #'
-#' The trigger index: the footprint gust averaged over the UK, weighted by
-#' [uk_weights()]. Cells with no gust value (more than 1000 km from the
-#' track) are left out, so a storm with no UK values gives NaN.
+#' The trigger index: gusts averaged over the UK, weighted by [uk_weights()].
+#' Cells with no gust value (more than 1000 km from the track) are left out,
+#' so a storm with no UK values gives NaN.
 #'
-#' @param nc_path Path to one storm's footprint NetCDF file.
+#' @param gust Gust values (m/s) of every cell of the grid `wts` was made
+#'   on, in cell order.
 #' @param wts The list returned by [uk_weights()].
 #' @return The weighted mean gust (m/s).
 #' @export
-uk_mean_gust_index <- function(nc_path, wts) {
-  v <- terra::values(terra::rast(nc_path), mat = FALSE)[wts$idx]
+uk_mean_gust <- function(gust, wts) {
+  v <- gust[wts$idx]
   sum(v * wts$weight, na.rm = TRUE) / sum(wts$weight[!is.na(v)])
+}
+
+#' UK-wide mean gust of one storm
+#'
+#' [uk_mean_gust()] of one storm's footprint file.
+#'
+#' @param nc_path Path to one storm's footprint NetCDF file.
+#' @inheritParams uk_mean_gust
+#' @return The weighted mean gust (m/s).
+#' @export
+uk_mean_gust_index <- function(nc_path, wts) {
+  uk_mean_gust(terra::values(terra::rast(nc_path), mat = FALSE), wts)
 }
