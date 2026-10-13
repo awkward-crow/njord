@@ -9,8 +9,9 @@
 # exactly. Both are restricted to the cells with some UK land in the cover
 # raster, so the curve is not applied to sea cells. Losses are in USD.
 #
-# Needs unzip_footprints.sh and rasterize_uk.R to have been run, and for the
-# losses, download_litpop.sh and convert_litpop.py.
+# Needs these scripts in inst/scripts/data-raw to have been run:
+# unzip_footprints.sh and rasterize_uk.R, and for the losses,
+# download_litpop.sh and convert_litpop.py.
 # Uses the package functions through devtools::load_all(). 
 #
 # Run from the project root.
@@ -22,12 +23,15 @@ footprint_file <- paste0("data-raw/footprints/nc/storm_footprint-hodges-raw-",
                          "20200209-1758-original-decontaminated-v1_0.nc")
 cover_file <- "data-raw/nuts/uk_nuts1_cover.tif"
 litpop_file <- "data-raw/litpop/LitPop_150arcsec_GBR.csv"
+data_raw_scripts <- "inst/scripts/data-raw"
 mdd_scale <- 0.8
 
 if (!file.exists(footprint_file)) {
-  message(footprint_file, " not found; run unzip_footprints.sh first.")
+  message(footprint_file, " not found; run ",
+          file.path(data_raw_scripts, "unzip_footprints.sh"), " first.")
 } else if (!file.exists(cover_file)) {
-  message(cover_file, " not found; run rasterize_uk.R first.")
+  message(cover_file, " not found; run ",
+          file.path(data_raw_scripts, "rasterize_uk.R"), " first.")
 } else {
   wts <- uk_weights(cover_file)
   index <- compute_index(footprint_file, wts)
@@ -35,8 +39,8 @@ if (!file.exists(footprint_file)) {
           " m/s, over ", length(wts$idx), " cells with UK land.")
   if (!file.exists(litpop_file)) {
     message(litpop_file, " not found, so no losses; run ",
-            "inst/scripts/download_litpop.sh, then ",
-            "inst/scripts/convert_litpop.py.")
+            file.path(data_raw_scripts, "download_litpop.sh"), ", then ",
+            file.path(data_raw_scripts, "convert_litpop.py"), ".")
   } else {
     assets <- aggregate(load_litpop_uk(litpop_file), 6, sum, na.rm = TRUE)
     fp <- rast(footprint_file)

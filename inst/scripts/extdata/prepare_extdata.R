@@ -11,8 +11,9 @@
 #   uk_nuts1_cover.tif      UK land fraction per cell, from rasterize_uk.R
 #   uk_litpop_025deg.tif    LitPop assets (USD), 6 x 6 cells summed to 0.25
 #
-# Needs unzip_footprints.sh, rasterize_uk.R, download_litpop.sh and
-# convert_litpop.py to have been run. Writes nothing if any output exists.
+# Needs these scripts in inst/scripts/data-raw to have been run:
+# unzip_footprints.sh, rasterize_uk.R, download_litpop.sh and
+# convert_litpop.py. Writes nothing if any output exists.
 # Uses the package functions through devtools::load_all().
 #
 # Run from the project root.
@@ -32,6 +33,7 @@ footprint_file <- paste0("data-raw/footprints/nc/storm_footprint-hodges-raw-",
 cover_file <- "data-raw/nuts/uk_nuts1_cover.tif"
 litpop_file <- "data-raw/litpop/LitPop_150arcsec_GBR.csv"
 out_dir <- "inst/extdata"
+data_raw_scripts <- "inst/scripts/data-raw"
 out <- file.path(out_dir, c("ciara_footprint_uk.tif", "uk_nuts1_cover.tif",
                             "uk_litpop_025deg.tif"))
 names(out) <- c("footprint", "cover", "assets")
@@ -41,12 +43,15 @@ if (any(file.exists(out))) {
           paste(out[file.exists(out)], collapse = ", "),
           ". Delete them to rebuild.")
 } else if (!file.exists(footprint_file)) {
-  message(footprint_file, " not found; run unzip_footprints.sh first.")
+  message(footprint_file, " not found; run ",
+          file.path(data_raw_scripts, "unzip_footprints.sh"), " first.")
 } else if (!file.exists(cover_file)) {
-  message(cover_file, " not found; run rasterize_uk.R first.")
+  message(cover_file, " not found; run ",
+          file.path(data_raw_scripts, "rasterize_uk.R"), " first.")
 } else if (!file.exists(litpop_file)) {
-  message(litpop_file, " not found; run download_litpop.sh, then ",
-          "convert_litpop.py.")
+  message(litpop_file, " not found; run ",
+          file.path(data_raw_scripts, "download_litpop.sh"), ", then ",
+          file.path(data_raw_scripts, "convert_litpop.py"), ".")
 } else {
   assets <- aggregate(load_litpop_uk(litpop_file), 6, sum, na.rm = TRUE)
   dir.create(out_dir, showWarnings = FALSE)
@@ -59,5 +64,6 @@ if (any(file.exists(out))) {
           paste(sprintf("  %-24s %5.1f kB", basename(out),
                         file.size(out) / 1e3), collapse = "\n"),
           "\nIndex from these files: ", round(index, 2), " m/s over ",
-          length(wts$idx), " cells (ciara_demo.R gives 31.34 over 750).")
+          length(wts$idx), " cells (inst/demos/ciara_demo.R gives 31.34 ",
+          "over 750).")
 }
