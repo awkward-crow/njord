@@ -10,6 +10,7 @@ every script behaves when run.
 |---------------------|-------------------------------------------------------------------|
 | `prepare_extdata.R` | `ciara_footprint_uk.tif`, `uk_nuts1_cover.tif`, `uk_litpop_025deg.tif` |
 | `uk_storm_values.R` | `uk_storm_values.csv`, one row per storm                           |
+| `uk_storm_losses.R` | `uk_storm_losses.csv`, one row per storm                           |
 
 ## prepare_extdata.R
 
@@ -97,3 +98,41 @@ For the footprints downloaded on 2026-09-28 it gave 1,905 storms. 27 have
 no UK cell values and 29 have no `max_gust`. 1,482 have a `max_gust` above
 25 m/s, and 1,563 have some UK land above 25 m/s; the difference is storms
 whose gusts pass 25 m/s only in cells that are mostly sea.
+
+## uk_storm_losses.R
+
+Models each storm's loss to UK assets. The output is a CSV with one row per
+storm:
+
+| Column          | Meaning                                                     |
+|-----------------|-------------------------------------------------------------|
+| `track_id`      | the storm's track id, from the footprint filename           |
+| `loss_usd_mdd1` | the modelled loss to UK assets (USD), with `mdd_scale = 1`  |
+
+The loss is the Schwierz vulnerability curve (`schwierz_mdr()`) applied to
+the footprint gust in each cell with UK land, times the LitPop assets in that
+cell, summed. It is the same calculation as `inst/demos/ciara_demo.R`, on the
+same grid and assets: each footprint is cropped to the grid of the rasters
+in `inst/extdata/`, and the assets are `uk_litpop_025deg.tif`.
+
+The loss is proportional to `mdd_scale`, so the file holds it at 1 and a
+demo multiplies by its own scale; Ciara's 0.575 USD bn here is 0.460 at the
+demo's 0.8. Footprint cells that are `NaN` add no loss. The curve is above
+zero from 20 m/s, so most storms have some loss, if only a small one.
+
+It needs `unzip_footprints.sh` from `inst/scripts/data-raw/` and
+`prepare_extdata.R` to have been run. It checks that the first footprint,
+cropped, is on the grid of the rasters. An existing output file is not made
+again. On success it reports the number of storms, how many have a loss, the
+largest loss with its track id and Ciara's loss, which should match the
+demo at `mdd_scale = 1`. It takes about 20 seconds.
+
+For the footprints downloaded on 2026-09-28 it gave:
+
+```
+Wrote inst/extdata/uk_storm_losses.csv: 1905 storms, 1828 with a loss. The largest is 1.675 USD bn (track 1070); Ciara (track 1758) 0.575 USD bn, which should be 0.575.
+```
+
+Of the 1,828 storms with a loss, 800 lose more than 1 million USD, 70 more
+than 100 million and 4 more than 1 billion. The largest, track 1070, is the
+Burns' Day storm of 25 January 1990.
