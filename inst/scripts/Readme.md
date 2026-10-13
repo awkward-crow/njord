@@ -4,12 +4,14 @@ These scripts make the data that njord uses. They are in two folders, by
 where their output goes:
 
 - [`data-raw/`](data-raw/Readme.md) downloads the raw hazard data, the UK
-  asset exposure and the region boundaries used to pick out the UK, puts the
-  UK regions on the footprint grid and summarises each storm's footprint
-  over the UK. All its output goes to `data-raw/`, which git ignores.
-- [`extdata/`](extdata/Readme.md) writes the small extracts in
-  `inst/extdata/` that the package's articles and demos read, so that they
-  run without `data-raw/`. Its scripts read their inputs from `data-raw/`.
+  asset exposure and the region boundaries used to pick out the UK, and puts
+  the UK regions on the footprint grid. All its output goes to `data-raw/`,
+  which git ignores.
+- [`extdata/`](extdata/Readme.md) writes the files in `inst/extdata/` that
+  the package's articles and demos read, so that they run without
+  `data-raw/`: small extracts of the hazard and exposure data, and a summary
+  of each storm's footprint over the UK. Its scripts read their inputs from
+  `data-raw/`.
 
 The demonstrations of the package functions, such as Storm Ciara from
 footprint to loss, are in [`inst/demos/`](../demos/Readme.md).

@@ -12,7 +12,6 @@ sources and how every script behaves when run.
 | `unzip_footprints.sh`   | `footprints/nc/*.nc`, one per storm                                |
 | `download_nuts.R`       | `nuts/NUTS_RG_01M_2021_4326_LEVL_1.geojson`                        |
 | `rasterize_uk.R`        | `nuts/uk_nuts1_cover.tif`                                          |
-| `uk_storm_values.R`     | `uk_storm_values.csv`, one row per storm                           |
 | `submit_era5_gust.R`    | `era5_gust/jobs.csv`, the CDS requests waiting to be downloaded    |
 | `download_era5_gust.R`  | `era5_gust/era5_fg10_daymax_YYYY.nc`, one per year 1991–2020       |
 | `download_litpop.sh`    | `litpop/LitPop_150arcsec_GBR.hdf5`                                 |
@@ -148,59 +147,6 @@ land, adding up to 538.8 whole cells. That is 244,671 km², against 244,545 km²
 from the region boundaries.
 
 Administrative boundaries: © EuroGeographics.
-
-## uk_storm_values.R
-
-Summarises each storm's footprint over UK land. The output is a CSV with
-one row per storm:
-
-| Column         | Meaning                                                         |
-|----------------|-----------------------------------------------------------------|
-| `track_id`     | the storm's track id, from the footprint filename               |
-| `start_date`   | the storm's start date, from the footprint filename             |
-| `start_time`   | the time of the track's first point (UTC)                       |
-| `central_time` | the centre of the 72-hour window the gusts are taken over (UTC) |
-| `n_valid`      | UK cells with a gust value, out of 750                          |
-| `max_gust`     | the highest gust in any cell at least half UK land (m/s)        |
-| `area_25`      | UK land area with gusts above 25 m/s (km²)                      |
-| `mean_gust_25` | the mean gust over that area (m/s)                              |
-| `ssi`          | storm severity index, `mean_gust_25`³ × `area_25`               |
-
-Cells are weighted by their UK land fraction, from the `UK` layer of
-`uk_nuts1_cover.tif`, and by their area in km², which shrinks with latitude.
-"Above 25 m/s" means strictly greater. The SSI follows the definition in the
-CDS summary indicators: the mean gust over the area above the threshold,
-cubed, times that area.
-
-The highest gust is taken only over cells that are at least half UK land
-(533 of the 750 cells). Cells that are mostly sea are often the windiest,
-and including them would let sea gusts set the UK maximum for most storms.
-With this rule, counts of storms above 15.6, 20 and 25 m/s match the CDS
-summary indicators' UK `storms_number` closely, year by year. The cut-off
-is `min_cover` near the end of the script. Area, mean gust and SSI still use
-every cell with some UK land, weighted by its land fraction.
-
-Footprint cells that are `NaN` are left out. A storm with no UK cell values
-has `area_25` and `ssi` zero. A storm with no value in a cell at least half
-land has `max_gust` `NA`.
-
-`start_time` and `central_time` are read from each footprint file's header
-and written as `YYYY-MM-DD HH:MM`, in UTC. GDAL doesn't read these header
-values, so the script runs `ncdump` (from the netCDF tools in the dev shell)
-on every file. The central time is the better guide to when a storm's
-strongest gusts occurred: the start time can be days earlier, as some
-tracks last two weeks or more.
-
-It needs `unzip_footprints.sh` and `rasterize_uk.R` to have been run. An
-existing output file is not made again. On success it reports the number of
-storms and their start dates, how many have UK values and how many have a
-`max_gust` above the threshold, and the highest `max_gust` with its track id.
-It takes about 30 seconds.
-
-For the footprints downloaded on 2026-09-28 it gave 1,905 storms. 27 have
-no UK cell values and 29 have no `max_gust`. 1,482 have a `max_gust` above
-25 m/s, and 1,563 have some UK land above 25 m/s; the difference is storms
-whose gusts pass 25 m/s only in cells that are mostly sea.
 
 ## submit_era5_gust.R
 
