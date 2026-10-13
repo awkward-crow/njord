@@ -58,7 +58,7 @@ and a day. So the start dates have to be known first, and they come from the
 tracks.
 
 The tracks can be had in a single request for all storms, which is what
-[`download_tracks.R`](https://github.com/awkward-crow/njord/blob/main/inst/scripts/download_tracks.R)
+[`download_tracks.R`](https://github.com/awkward-crow/njord/blob/main/inst/scripts/data-raw/download_tracks.R)
 does. The result is a zip holding one CSV. Each storm has an id, and its start
 date is the date of its earliest time step.
 
@@ -69,7 +69,7 @@ on 75 dates more than one storm started.
 
 <!-- TODO: add something about how numbers that follow refer to a download carried out on 2026-09-28 and check the number of storms etc -->
 
-[`download_footprints.R`](https://github.com/awkward-crow/njord/blob/main/inst/scripts/download_footprints.R)
+[`download_footprints.R`](https://github.com/awkward-crow/njord/blob/main/inst/scripts/data-raw/download_footprints.R)
 reads the start dates from the tracks zip and downloads the footprint of every
 storm.
 
@@ -88,7 +88,7 @@ carries on where it stopped.
 ## Checking the download
 
 With 721 requests, a missing or damaged file would be easy to overlook.
-[`check_footprints.sh`](https://github.com/awkward-crow/njord/blob/main/inst/scripts/check_footprints.sh)
+[`check_footprints.sh`](https://github.com/awkward-crow/njord/blob/main/inst/scripts/data-raw/check_footprints.sh)
 compares what was downloaded with the tracks, without extracting anything. It
 checks that:
 
@@ -101,11 +101,11 @@ For the download of 2026-09-28 all four hold: 721 zips, 1,905 footprints for
 1,905 storms, and no date mismatches.
 
 Once the download has passed the check,
-[`unzip_footprints.sh`](https://github.com/awkward-crow/njord/blob/main/inst/scripts/unzip_footprints.sh)
+[`unzip_footprints.sh`](https://github.com/awkward-crow/njord/blob/main/inst/scripts/data-raw/unzip_footprints.sh)
 unpacks the zips into a single directory of 1,905 NetCDF files, one per storm.
 
 The scripts' own
-[readme](https://github.com/awkward-crow/njord/blob/main/inst/scripts/Readme.md)
+[readme](https://github.com/awkward-crow/njord/blob/main/inst/scripts/data-raw/Readme.md)
 has the details of what each one writes and the order to run them in.
 
 ## What a footprint contains
