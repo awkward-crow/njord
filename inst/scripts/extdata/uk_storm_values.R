@@ -20,11 +20,11 @@
 # window the gusts are taken over) are read from each file's header with
 # ncdump, as GDAL doesn't show them. Both are UTC, written as "YYYY-MM-DD HH:MM".
 #
-# Needs unzip_footprints.sh and rasterize_uk.R to have been run; says so and
-# does nothing if the footprints or the cover file are missing. An existing
-# output file is not made again. Otherwise prints a brief summary of what was
-# written. The CSV is written to a .part file and renamed when complete. Run
-# from the project root.
+# Needs inst/scripts/data-raw/unzip_footprints.sh and rasterize_uk.R to have
+# been run; says so and does nothing if the footprints or the cover file are
+# missing. An existing output file is not made again. Otherwise prints a
+# brief summary of what was written. The CSV is written to a .part file and
+# renamed when complete. Run from the project root.
 
 library(terra)
 
@@ -80,18 +80,20 @@ uk_storm_values <- function(files, cover, threshold, min_cover) {
   )
 }
 
-target <- "data-raw/uk_storm_values.csv"
+target <- "inst/extdata/uk_storm_values.csv"
 cover_file <- "data-raw/nuts/uk_nuts1_cover.tif"
 files <- list.files("data-raw/footprints/nc", pattern = "\\.nc$",
                     full.names = TRUE)
+data_raw_scripts <- "inst/scripts/data-raw"
 
 if (file.exists(target)) {
   message(target, " already exists; delete it to make it again.")
 } else if (!file.exists(cover_file)) {
-  message(cover_file, " not found; run rasterize_uk.R first.")
+  message(cover_file, " not found; run ",
+          file.path(data_raw_scripts, "rasterize_uk.R"), " first.")
 } else if (length(files) == 0) {
-  message("No footprint files in data-raw/footprints/nc; ",
-          "run unzip_footprints.sh first.")
+  message("No footprint files in data-raw/footprints/nc; run ",
+          file.path(data_raw_scripts, "unzip_footprints.sh"), " first.")
 } else {
   files <- files[order(as.integer(name_part(files, 3)))]
   cover <- rast(cover_file)[["UK"]]
