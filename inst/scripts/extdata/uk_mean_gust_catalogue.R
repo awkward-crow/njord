@@ -1,8 +1,8 @@
 # uk_mean_gust_catalogue.R
 #
-# One row per storm with the UK mean gust trigger index (uk_mean_gust()):
-# the footprint gust averaged over the UK, weighted by UK land cover and
-# cell area. Gusts are taken on the grid of the rasters in inst/extdata, so
+# One row per storm with the UK mean gust trigger index
+# (weighted_mean_index()): the footprint gust averaged over the UK, weighted
+# by UK land cover and cell area. Gusts are taken on the grid of the rasters in inst/extdata, so
 # every index uses the same UK cells and weights as the demos. A storm with
 # no UK values gives NaN.
 #
@@ -25,7 +25,7 @@ track_id <- function(files)
 # Index of each storm: its gusts cropped to the cover's grid.
 storm_index <- function(files, cover, wts)
   vapply(files, function(f)
-    uk_mean_gust(values(crop(rast(f), cover), mat = FALSE), wts),
+    weighted_mean_index(values(crop(rast(f), cover), mat = FALSE), wts),
     numeric(1), USE.NAMES = FALSE)
 
 target <- "inst/extdata/uk_mean_gust_catalogue.csv"
@@ -47,7 +47,7 @@ if (file.exists(target)) {
           "; nothing written.")
 } else {
   files <- files[order(track_id(files))]
-  wts <- uk_weights(cover_file)
+  wts <- area_weights(cover_file, regions = "UK")
   out <- data.frame(track_id = track_id(files),
                     uk_mean_gust = storm_index(files, rast(cover_file), wts))
   part <- paste0(target, ".part")

@@ -28,9 +28,9 @@ article runs from the package alone, without `data-raw/`:
 
 All three are cropped to the extent of the summed LitPop raster, longitude
 −8.875 to 1.875 and latitude 49.625 to 60.875, which is 43 × 45 cells. The
-footprint and the cover have to be cropped together, because `uk_weights()`
-returns cell numbers on the cover's grid and `uk_mean_gust_index()` uses them on
-the footprint's.
+footprint and the cover have to be cropped together, because
+`area_weights()` returns cell numbers on the cover's grid and
+`weighted_mean_index()` uses them on the footprint's.
 
 It needs `unzip_footprints.sh`, `rasterize_uk.R`, `download_litpop.sh` and
 `convert_litpop.py` from `inst/scripts/data-raw/` to have been run. As a
@@ -146,15 +146,15 @@ with one row per storm:
 | Column         | Meaning                                                  |
 |----------------|----------------------------------------------------------|
 | `track_id`     | the storm's track id, from the footprint filename        |
-| `uk_mean_gust` | the UK mean gust (m/s), from `uk_mean_gust()`            |
+| `uk_mean_gust` | the UK mean gust (m/s), from `weighted_mean_index()`     |
 
 The index is the footprint gust averaged over the cells with UK land,
 weighted by their UK land fraction and their area, as in
 `inst/demos/ciara_demo.R`. Each footprint is cropped to the grid of the
 rasters in `inst/extdata/`, and the weights come from `uk_nuts1_cover.tif`,
 so every storm uses the same 750 cells and weights as the demos. Cropping
-doesn't change the index: for a sample of 52 storms it matched
-`uk_mean_gust_index()` on the full footprints to within 1e-13 m/s.
+doesn't change the index: for a sample of 52 storms it matched the index
+on the full footprints to within 1e-13 m/s.
 
 Footprint cells that are `NaN` are left out. A storm with no UK cell values
 has no index; the script counts these as `NaN`, and `write.csv()` writes

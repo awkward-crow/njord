@@ -53,7 +53,7 @@ if (file.exists(target)) {
           "; nothing written.")
 } else {
   files <- files[order(track_id(files))]
-  wts <- uk_weights(cover_file)
+  wts <- area_weights(cover_file, regions = "UK")
   mdd_scale <- 1
   out <- data.frame(
     track_id = track_id(files),

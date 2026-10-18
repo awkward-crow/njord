@@ -28,9 +28,10 @@ if (any(c(footprint_file, cover_file, assets_file) == "")) {
   message("Rasters missing from inst/extdata; run ",
           "inst/scripts/extdata/prepare_extdata.R.")
 } else {
-  wts <- uk_weights(cover_file)
-  index <- uk_mean_gust_index(footprint_file, wts)
-  gust <- values(rast(footprint_file), mat = FALSE)[wts$idx]
+  wts <- area_weights(cover_file, regions = "UK")
+  footprint <- values(rast(footprint_file), mat = FALSE)
+  index <- weighted_mean_index(footprint, wts)
+  gust <- footprint[wts$idx]
   assets <- values(rast(assets_file), mat = FALSE)[wts$idx]
   loss <- sum(schwierz_mdr(gust, mdd_scale = mdd_scale) * assets, na.rm = TRUE)
   message("Storm Ciara (track 1758): UK mean gust index ", round(index, 2),

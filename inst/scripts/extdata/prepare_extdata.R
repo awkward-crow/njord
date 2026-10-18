@@ -4,7 +4,7 @@
 # (vignettes/articles/ciara.Rmd) reads from inst/extdata, so that it runs
 # without data-raw/. All three are cropped to the extent of the LitPop
 # exposure summed to 0.25 degrees, lon -8.875 to 1.875, lat 49.625 to 60.875,
-# so they share one grid and the cell numbers from uk_weights() match the
+# so they share one grid and the cell numbers from area_weights() match the
 # footprint.
 #
 #   ciara_footprint_uk.tif  Ciara (track 1758) footprint, maximum gust (m/s)
@@ -58,8 +58,9 @@ if (any(file.exists(out))) {
   write_part(assets, out[["assets"]])
   write_part(crop(rast(footprint_file), assets), out[["footprint"]])
   write_part(crop(rast(cover_file), assets), out[["cover"]])
-  wts <- uk_weights(out[["cover"]])
-  index <- uk_mean_gust_index(out[["footprint"]], wts)
+  wts <- area_weights(out[["cover"]], regions = "UK")
+  index <- weighted_mean_index(values(rast(out[["footprint"]]), mat = FALSE),
+                               wts)
   message("Written:\n",
           paste(sprintf("  %-24s %5.1f kB", basename(out),
                         file.size(out) / 1e3), collapse = "\n"),
