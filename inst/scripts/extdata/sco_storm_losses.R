@@ -11,13 +11,13 @@
 # than 1000 km from the track) add no loss, so a storm with no values in
 # Scotland has loss zero.
 #
-# Needs inst/scripts/data-raw/unzip_footprints.sh and
-# inst/scripts/extdata/prepare_extdata.R to have been run; says so and does
-# nothing if the footprints, the cover raster or the assets raster are
-# missing, or if the first footprint, cropped, or the assets raster is not on
-# the cover raster's grid. An existing output file is not made again. The CSV
-# is written to a .part file and renamed when complete. Uses the package
-# functions through devtools::load_all().
+# Needs inst/scripts/data-raw/unzip_footprints.sh, then
+# inst/scripts/extdata/uk_litpop_025deg.R and uk_nuts1_cover.R, to have been
+# run; says so and does nothing if the footprints, the cover raster or the
+# assets raster are missing, or if the first footprint, cropped, or the assets
+# raster is not on the cover raster's grid. An existing output file is not
+# made again. The CSV is written to a .part file and renamed when complete.
+# Uses the package functions through devtools::load_all().
 #
 # Run from the project root.
 
@@ -47,7 +47,7 @@ if (file.exists(target)) {
   message(target, " already exists; delete it to make it again.")
 } else if (!file.exists(cover_file) || !file.exists(assets_file)) {
   message(cover_file, " or ", assets_file, " not found; run ",
-          "inst/scripts/extdata/prepare_extdata.R first.")
+          "inst/scripts/extdata/uk_litpop_025deg.R, then uk_nuts1_cover.R.")
 } else if (length(files) == 0) {
   message("No footprint files in data-raw/footprints/nc; run ",
           "inst/scripts/data-raw/unzip_footprints.sh first.")

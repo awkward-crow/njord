@@ -7,7 +7,8 @@
 # USD.
 #
 # Reads the rasters in inst/extdata written by
-# inst/scripts/extdata/prepare_extdata.R, so it runs without data-raw/. The
+# inst/scripts/extdata/uk_litpop_025deg.R, uk_nuts1_cover.R and
+# ciara_footprint_uk.R, so it runs without data-raw/. The
 # footprint, the UK cover and the LitPop assets summed to 0.25 degrees share
 # one grid, so the gusts and assets are taken at the cells with UK land, and
 # the curve is not applied to sea cells.
@@ -25,8 +26,8 @@ assets_file <- extdata("uk_litpop_025deg.tif")
 mdd_scale <- 0.8
 
 if (any(c(footprint_file, cover_file, assets_file) == "")) {
-  message("Rasters missing from inst/extdata; run ",
-          "inst/scripts/extdata/prepare_extdata.R.")
+  message("Rasters missing from inst/extdata; run uk_litpop_025deg.R, ",
+          "uk_nuts1_cover.R and ciara_footprint_uk.R in inst/scripts/extdata.")
 } else {
   wts <- area_weights(cover_file, regions = "UK")
   footprint <- values(rast(footprint_file), mat = FALSE)

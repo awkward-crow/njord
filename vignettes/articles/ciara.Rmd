@@ -1,0 +1,81 @@
+---
+title: "Storm Ciara: a worked example"
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>", echo = FALSE)
+library(terra)
+library(ggplot2)
+library(tidyterra)
+devtools::load_all(quiet = TRUE)
+
+cover_file <- system.file("extdata", "uk_nuts1_cover.tif", package = "njord")
+fp_file <- system.file("extdata", "ciara_footprint_uk.tif", package = "njord")
+assets_file <- system.file("extdata", "uk_litpop_025deg.tif", package = "njord")
+mdd_scale <- 0.8
+uk <- rnaturalearth::ne_countries(country = "United Kingdom",
+                                  scale = "medium", returnclass = "sf")
+```
+
+## Hazard: the Ciara footprint
+
+<!-- The ranks below are typed in from data-raw/uk_storm_values.csv (written
+by inst/scripts/data-raw/uk_storm_values.R). They could be computed here
+instead, if that CSV (about 150 kB) were added to inst/extdata by
+inst/scripts/extdata/prepare_extdata.R.
+
+By storm severity index the two storms above Ciara are tracks 926 and 927,
+both January 1984 (start dates 12 and 14 January). They may be one storm
+counted twice, the two tracks sharing the same gusts; if so, Ciara is second
+by severity index. -->
+
+Storm Ciara hit the UK on 9 February 2020. In the C3S windstorm
+catalogue (Hodges tracking, track 1758) it is the broadest storm over the UK
+of the 1,905 from 1940 to 2026: no other storm brought gusts above 25 m/s to
+so much of the UK. It stands third by storm severity index, however its highest gust
+over UK land, 38.4 m/s, is unremarkable. It ranks only 145th of the total of 1,905 storms.
+
+```{r footprint, fig.cap = "Storm Ciara footprint: the maximum 10 m gust over the 72 hours of the storm (C3S windstorm reanalysis, Hodges track 1758), m/s."}
+ggplot() +
+  geom_spatraster(data = rast(fp_file)) +
+  geom_sf(data = uk, fill = NA, colour = "white", linewidth = 0.3) +
+  scale_fill_viridis_c(name = "Gust (m/s)", na.value = "transparent") +
+  theme_minimal()
+```
+
+## Trigger: the UK mean gust index
+
+The trigger index $I$ is the footprint gust averaged over UK land. Each
+0.25° cell $i$ that covers some UK land has weight $w_i = f_i \cos\phi_i$,
+where $f_i$ is the fraction of the cell that is UK land and $\phi_i$ its
+latitude; $\cos\phi_i$ is proportional to the cell's area. Then
+$I = \sum_i w_i v_i / \sum_i w_i$, with $v_i$ the cell's gust. Cells with no
+gust value are left out.
+
+```{r index, echo = TRUE}
+wts <- area_weights(cover_file, regions = "UK")
+index <- weighted_mean_index(values(rast(fp_file), mat = FALSE), wts)
+```
+
+For Ciara the index is `r round(index, 1)` m/s over `r length(wts$idx)`
+cells with UK land cover.
+
+The payout is a linear ramp: nothing below the attachment $A$, the full
+limit $L$ above the exhaustion $E$, and a straight line between them,
+$P(I) = L \min(1, \max(0, (I - A)/(E - A)))$.
+
+```{r ramp, fig.cap = "Linear ramp payout against the UK mean gust index. The attachment (22 m/s) and exhaustion (28 m/s) are illustrative; calibrating them to storm losses with `calibrate_trigger()` is still to be done. Storm Ciara's index is the dashed line."}
+attachment <- 22
+exhaustion <- 28
+ramp <- data.frame(index = seq(15, 35, by = 0.1))
+ramp$payout <- payout(ramp$index, attachment, exhaustion, limit = 1)
+ggplot(ramp, aes(index, payout)) +
+  geom_line() +
+  geom_vline(xintercept = index, linetype = "dashed") +
+  annotate("text", x = index, y = 0.5, label = "Ciara", hjust = 1.1) +
+  labs(x = "UK mean gust index (m/s)", y = "Payout / limit") +
+  theme_minimal()
+```
+
+Ciara's index of `r round(index, 1)` m/s is above the exhaustion, so the
+ramp pays the full limit.
