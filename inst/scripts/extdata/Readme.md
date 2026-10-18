@@ -8,7 +8,9 @@ every script behaves when run.
 
 | Script                     | Output in `inst/extdata/`                                              |
 |----------------------------|------------------------------------------------------------------------|
-| `prepare_extdata.R`        | `ciara_footprint_uk.tif`, `uk_nuts1_cover.tif`, `uk_litpop_025deg.tif` |
+| `uk_litpop_025deg.R`       | `uk_litpop_025deg.tif`, the LitPop assets on the 0.25° grid            |
+| `uk_nuts1_cover.R`         | `uk_nuts1_cover.tif`, the NUTS1 land cover on that grid                |
+| `ciara_footprint_uk.R`     | `ciara_footprint_uk.tif`, the Storm Ciara footprint on that grid       |
 | `uk_storm_values.R`        | `uk_storm_values.csv`, one row per storm                               |
 | `uk_storm_losses.R`        | `uk_storm_losses.csv`, one row per storm                               |
 | `uk_exposure_gust.R`       | `uk_exposure_gust.csv`, one row per storm                              |
@@ -17,37 +19,61 @@ every script behaves when run.
 | `ew_storm_losses.R`        | `ew_storm_losses.csv`, one row per storm                               |
 | `sco_storm_losses.R`       | `sco_storm_losses.csv`, one row per storm                              |
 
-## prepare_extdata.R
+## uk_litpop_025deg.R
 
-Writes the three small rasters that the Storm Ciara article
-(`vignettes/articles/ciara.Rmd`) reads to `inst/extdata/`, so that the
-article runs from the package alone, without `data-raw/`:
+Writes `uk_litpop_025deg.tif`, the LitPop assets of the UK in USD summed
+from LitPop's 150-arcsecond cells to the 0.25° footprint grid, 6 × 6 LitPop
+cells to each footprint cell (`load_litpop_uk()`, then `aggregate()`). The
+extent is that of `load_litpop_uk()`, longitude −8.875 to 1.875 and latitude
+49.625 to 60.875, 43 × 45 cells. Its edges are footprint cell edges, so the
+sum keeps the total exactly. This grid is the grid of every raster in
+`inst/extdata/`: `uk_nuts1_cover.R` crops the cover to it, and
+`ciara_footprint_uk.R` crops the footprint to the cover.
 
-- `ciara_footprint_uk.tif` — the Ciara footprint (track 1758), maximum gust
-  in m/s.
-- `uk_nuts1_cover.tif` — the UK land fraction of each cell, the layers of the
-  cover raster from `rasterize_uk.R`.
-- `uk_litpop_025deg.tif` — the LitPop assets in USD, 6 × 6 LitPop cells
-  summed to each 0.25° cell.
-
-All three are cropped to the extent of the summed LitPop raster, longitude
-−8.875 to 1.875 and latitude 49.625 to 60.875, which is 43 × 45 cells. The
-footprint and the cover have to be cropped together, because
-`area_weights()` returns cell numbers on the cover's grid and
-`weighted_mean_index()` uses them on the footprint's.
-
-It needs `unzip_footprints.sh`, `rasterize_uk.R`, `download_litpop.sh` and
-`convert_litpop.py` from `inst/scripts/data-raw/` to have been run. As a
-check, it ends by computing the trigger index from the new files, which
-should match the index from the full footprint in `data-raw/`. For the files
-above it gave:
+It needs `download_litpop.sh` and `convert_litpop.py` from
+`inst/scripts/data-raw/` to have been run. An existing output file is not
+made again. On success it reports the grid, the number of cells with
+assets, the total and how far that total is from the total of the LitPop
+cells. For the LitPop file downloaded on 2026-10-09 it gave:
 
 ```
-Written:
-  ciara_footprint_uk.tif    11.9 kB
-  uk_nuts1_cover.tif        14.3 kB
-  uk_litpop_025deg.tif       5.3 kB
-Index from these files: 31.34 m/s over 750 cells (the full footprint gives 31.34 over 750).
+Wrote inst/extdata/uk_litpop_025deg.tif (5.3 kB): 45 x 43 cells, 728 with assets, USD 9471.9 bn in all; the LitPop cells differ from that by USD 0.00977.
+```
+
+## uk_nuts1_cover.R
+
+Writes `uk_nuts1_cover.tif`, the NUTS1 land cover raster from
+`rasterize_uk.R` cropped to the grid of `uk_litpop_025deg.tif`. It keeps all
+13 layers, one per NUTS1 region (`UKC` to `UKN`) and one for the whole UK
+(`UK`), each the fraction of every cell that is land in that region.
+`area_weights()` and `exposure_weights()` read it, and the cell numbers they
+return are on its grid.
+
+It needs `rasterize_uk.R` from `inst/scripts/data-raw/` and
+`uk_litpop_025deg.R` to have been run. It writes nothing if the cropped
+cover is not on the grid of the assets raster, or if cropping loses any cell
+with UK land. An existing output file is not made again. It gave:
+
+```
+Wrote inst/extdata/uk_nuts1_cover.tif (14.3 kB): 13 layers, 45 x 43 cells, 750 with UK land, as on the full grid.
+```
+
+## ciara_footprint_uk.R
+
+Writes `ciara_footprint_uk.tif`, the footprint of Storm Ciara (February
+2020, track 1758), cropped to the grid of `uk_nuts1_cover.tif`.
+`inst/demos/ciara_demo.R` and `vignettes/articles/ciara.Rmd` read it.
+
+It needs `unzip_footprints.sh` and `rasterize_uk.R` from
+`inst/scripts/data-raw/` and `uk_nuts1_cover.R` to have been run. It writes
+nothing if the cropped footprint is not on the grid of the cover, or if its
+values at the cells with UK land differ from those of the full footprint at
+the cells with UK land in the full cover from `rasterize_uk.R`; that second
+check also catches a cover in `inst/extdata/` that isn't the crop of the one
+in `data-raw/`. An existing output file is not made again. It gave:
+
+```
+Wrote inst/extdata/ciara_footprint_uk.tif (11.9 kB): 45 x 43 cells, the 750 with UK land unchanged from the full footprint. Highest gust there 38.4 m/s.
 ```
 
 ## uk_storm_values.R
@@ -125,9 +151,9 @@ demo multiplies by its own scale; Ciara's 0.575 USD bn here is 0.460 at the
 demo's 0.8. Footprint cells that are `NaN` add no loss. The curve is above
 zero from 20 m/s, so most storms have some loss, if only a small one.
 
-It needs `unzip_footprints.sh` from `inst/scripts/data-raw/` and
-`prepare_extdata.R` to have been run. It checks that the first footprint,
-cropped, is on the grid of the rasters. An existing output file is not made
+It needs `unzip_footprints.sh` from `inst/scripts/data-raw/`, and
+`uk_litpop_025deg.R` and `uk_nuts1_cover.R`, to have been run. It checks
+that the first footprint, cropped, is on the grid of the rasters. An existing output file is not made
 again. On success it reports the number of storms, how many have a loss, the
 largest loss with its track id and Ciara's loss, which should match the
 demo at `mdd_scale = 1`. It takes about 20 seconds.
@@ -164,9 +190,10 @@ Footprint cells that are `NaN` are left out. A storm with no values in the
 cells with assets has no index; the script counts these as `NaN`, and
 `write.csv()` writes them as `NA`.
 
-It needs `unzip_footprints.sh` from `inst/scripts/data-raw/` and
-`prepare_extdata.R` to have been run. It checks that the assets raster and
-the first footprint, cropped, are on the grid of the cover raster. An
+It needs `unzip_footprints.sh` from `inst/scripts/data-raw/`, and
+`uk_litpop_025deg.R` and `uk_nuts1_cover.R`, to have been run. It checks
+that the assets raster and the first footprint, cropped, are on the grid of
+the cover raster. An
 existing output file is not made again. On success it reports the number of
 storms, how many have no values, the highest index with its track id and
 Ciara's index. It takes about 20 seconds.
@@ -258,9 +285,10 @@ the `UK` layer the same calculation gives `uk_storm_losses.csv` exactly, and
 the losses of England and Wales, Scotland and Northern Ireland (UKN, not
 written) add up to the UK loss of every storm to within 6 USD.
 
-It needs `unzip_footprints.sh` from `inst/scripts/data-raw/` and
-`prepare_extdata.R` to have been run. It checks that the assets raster and
-the first footprint, cropped, are on the grid of the cover raster. An
+It needs `unzip_footprints.sh` from `inst/scripts/data-raw/`, and
+`uk_litpop_025deg.R` and `uk_nuts1_cover.R`, to have been run. It checks
+that the assets raster and the first footprint, cropped, are on the grid of
+the cover raster. An
 existing output file is not made again. On success it reports the number of
 storms, how many have a loss, the number of cells and value of the assets,
 the largest loss with its track id and Ciara's loss. It takes about 20

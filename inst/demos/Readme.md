@@ -29,8 +29,9 @@ total exactly, and both gusts and assets are restricted to the cells with UK
 land, so the curve is not applied to sea cells. Losses are in USD.
 
 It reads the three rasters in `inst/extdata/` written by
-`inst/scripts/extdata/prepare_extdata.R`, so it runs from a checkout without
-`data-raw/` or a CDS account.
+`uk_litpop_025deg.R`, `uk_nuts1_cover.R` and `ciara_footprint_uk.R` in
+`inst/scripts/extdata/`, so it runs from a checkout without `data-raw/` or a
+CDS account.
 
 It gives:
 
