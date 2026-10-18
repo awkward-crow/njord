@@ -3,6 +3,7 @@
 export(area_weights)
 export(basis_risk)
 export(calibrate_trigger)
+export(exposure_weights)
 export(load_litpop_uk)
 export(payout)
 export(plot_vulnerability_curve)
