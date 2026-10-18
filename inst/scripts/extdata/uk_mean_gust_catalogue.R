@@ -2,9 +2,9 @@
 #
 # One row per storm with the UK mean gust trigger index
 # (weighted_mean_index()): the footprint gust averaged over the UK, weighted
-# by UK land cover and cell area. Gusts are taken on the grid of the rasters in inst/extdata, so
-# every index uses the same UK cells and weights as the demos. A storm with
-# no UK values gives NaN.
+# by UK land cover and cell area. Gusts are taken on the grid of the rasters
+# in inst/extdata, so every index uses the same UK cells and weights as the
+# demos. A storm with no UK values gives NaN.
 #
 # Needs inst/scripts/data-raw/unzip_footprints.sh and
 # inst/scripts/extdata/prepare_extdata.R to have been run; says so and does
