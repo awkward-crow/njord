@@ -25,6 +25,33 @@ area_weights <- function(cover_path, regions) {
        weight = cos(terra::yFromCell(cover, idx) * pi / 180) * share[idx])
 }
 
+#' Exposure weights for a weighted mean index
+#'
+#' Cells of the footprint grid that hold assets in the given NUTS1 regions,
+#' and their weights for an exposure-weighted mean: the value of the assets
+#' in the regions. A cell's assets are split between regions by their shares
+#' of its UK land, as if spread evenly over that land, so a cell on a border
+#' counts in each region by its share. Computed once, before a loop over
+#' storms with [weighted_mean_index()].
+#'
+#' @param assets_path Path to an asset raster on the same grid as the cover
+#'   raster, e.g. `uk_litpop_025deg.tif` in `inst/extdata`: the value of the
+#'   UK assets in each cell, NA where there are none.
+#' @inheritParams area_weights
+#' @return A list: `idx`, the cell numbers with assets in the regions, and
+#'   `weight`, the value of those assets in each of those cells.
+#' @export
+exposure_weights <- function(cover_path, assets_path, regions) {
+  cover <- terra::rast(cover_path)
+  # The assets are UK assets only, so a cell's assets lie on its UK land (the
+  # "UK" layer); the regions' share of that land is their share of the
+  # assets. Outside the UK this is 0/0, NaN, and the cell drops out below.
+  share <- region_share(cover, regions) / region_share(cover, "UK")
+  w <- terra::values(terra::rast(assets_path), mat = FALSE) * share
+  idx <- which(w > 0)
+  list(idx = idx, weight = w[idx])
+}
+
 # Fraction of each cell that is land in any of the regions (0 if none).
 region_share <- function(cover, regions)
   rowSums(terra::values(cover[[regions]], mat = TRUE), na.rm = TRUE)

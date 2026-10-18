@@ -22,3 +22,21 @@ test_that("area_weights sums the regions' land fractions", {
   expect_equal(area_weights(cover_path, c("UKL", "UKM")),
                area_weights(cover_path, "UK"))
 })
+
+test_that("exposure_weights splits cell assets by the regions' land share", {
+  grid <- terra::rast(nrows = 1, ncols = 3, nlyrs = 3, xmin = 0, xmax = 0.75,
+                      ymin = -0.125, ymax = 0.125)
+  cover <- terra::setValues(grid, cbind(c(1, 0.3, NA), c(NA, 0.5, NA),
+                                        c(1, 0.8, NA)))
+  names(cover) <- c("UKL", "UKM", "UK")
+  cover_path <- tempfile(fileext = ".tif")
+  terra::writeRaster(cover, cover_path)
+  assets_path <- tempfile(fileext = ".tif")
+  terra::writeRaster(terra::setValues(grid[[1]], c(100, 80, NA)), assets_path)
+  expect_equal(exposure_weights(cover_path, assets_path, "UK"),
+               list(idx = 1:2, weight = c(100, 80)))
+  expect_equal(exposure_weights(cover_path, assets_path, "UKM"),
+               list(idx = 2L, weight = 50))
+  expect_equal(exposure_weights(cover_path, assets_path, c("UKL", "UKM")),
+               exposure_weights(cover_path, assets_path, "UK"))
+})
