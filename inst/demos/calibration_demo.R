@@ -16,7 +16,9 @@
 # up to the 1-in-exhaust_rp year loss, so its limit is the difference. The
 # attachment and exhaustion are the index levels of those two losses
 # (calibrate_trigger()), and the basis risk is the payout minus what the
-# layer would pay.
+# layer would pay. In an interactive session it also plots, for each of the
+# three covers, the payout ramp and each storm's layer loss against the
+# index, for storms with an index of at least plot_min_index (ggplot2).
 #
 # Reads only inst/extdata, so it runs without data-raw/.
 # Uses the package functions through devtools::load_all().
@@ -72,6 +74,7 @@ gust_threshold <- 25
 mdd_scale <- 0.8
 attach_rp <- 5
 exhaust_rp <- 20
+plot_min_index <- 25
 
 if (any(files == "")) {
   message("Files missing from inst/extdata: ",
@@ -140,4 +143,30 @@ if (any(files == "")) {
                    regional_layer = bn(regional$layer_loss[top]),
                    storm_loss = bn(mdd_scale * events$uk_loss[top] /
                                      total_assets)), digits = 3)
+
+  if (interactive()) {
+    labels <- c(uk = "UK", ew = "England and Wales", sco = "Scotland")
+    by_cover <- function(f)
+      do.call(rbind, lapply(names(labels), function(k)
+        data.frame(cover = factor(labels[[k]], labels), f(covers[[k]]))))
+    storm_points <- by_cover(function(cv)
+      data.frame(index = cv$table$index, layer_loss = bn(cv$table$layer_loss)))
+    ramps <- by_cover(function(cv) {
+      x <- c(plot_min_index, cv$attachment, cv$exhaustion, max(cv$table$index))
+      data.frame(index = x,
+                 payout = bn(payout(x, cv$attachment, cv$exhaustion, cv$limit)))
+    })
+    print(ggplot2::ggplot() +
+            ggplot2::geom_point(
+              data = subset(storm_points, index >= plot_min_index),
+              ggplot2::aes(index, layer_loss), alpha = 0.4, size = 1) +
+            ggplot2::geom_line(data = ramps, ggplot2::aes(index, payout),
+                               colour = "firebrick") +
+            ggplot2::facet_wrap(~cover, ncol = 1, scales = "free_y") +
+            ggplot2::labs(x = "Exposure-weighted mean gust index (m/s)",
+                          y = "USD bn",
+                          title = paste("Trigger payout (line) and layer loss",
+                                        "(points), storm by storm")) +
+            ggplot2::theme_minimal())
+  }
 }

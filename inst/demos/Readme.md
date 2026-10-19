@@ -1,9 +1,9 @@
 # Demos
 
 These scripts demonstrate the package functions. They write nothing; each
-prints a short report with `message()`, so it goes to stderr,
-`calibration_demo.R` also prints a table to stdout and `ciara_demo.R` plots
-the footprint when run in an interactive session. They load the
+prints a short report with `message()`, so it goes to stderr, and
+`calibration_demo.R` also prints a table to stdout. Run in an interactive
+session, each also draws a plot. They load the
 package with `devtools::load_all()`, so they run without njord being
 installed.
 
@@ -140,3 +140,12 @@ Wales and track 344 for Scotland. The two regional layers together are also
 a bigger cover than the UK layer: their limits add up to 0.314 USD bn
 against 0.243, and they would pay 0.036 USD bn a year against 0.028. So the
 two sets of figures compare covers of different size.
+
+In an interactive session it also plots, one panel for each of the three
+covers, the payout ramp as a line and each storm's layer loss as a point,
+against the cover's index, in USD bn. A storm on the line is paid exactly
+what the layer would pay; the vertical gap is its basis risk. Storms with an
+index below `plot_min_index` (25 m/s), set at the top of the script, are
+left out, as nearly all have no layer loss. The panels share the index axis
+but each has its own loss axis. The two regional covers added together have
+no single index, so they are not plotted.
