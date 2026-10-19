@@ -11,6 +11,7 @@ every script behaves when run.
 | `uk_litpop_025deg.R`       | `uk_litpop_025deg.tif`, the LitPop assets on the 0.25° grid            |
 | `uk_nuts1_cover.R`         | `uk_nuts1_cover.tif`, the NUTS1 land cover on that grid                |
 | `ciara_footprint_uk.R`     | `ciara_footprint_uk.tif`, the Storm Ciara footprint on that grid       |
+| `burns_day_footprint.R`    | `burns_day_footprint.tif`, the Burns' Day footprint on the full grid   |
 | `uk_storm_values.R`        | `uk_storm_values.csv`, one row per storm                               |
 | `uk_storm_losses.R`        | `uk_storm_losses.csv`, one row per storm                               |
 | `uk_exposure_gust.R`       | `uk_exposure_gust.csv`, one row per storm                              |
@@ -27,8 +28,8 @@ cells to each footprint cell (`load_litpop_uk()`, then `aggregate()`). The
 extent is that of `load_litpop_uk()`, longitude −8.875 to 1.875 and latitude
 49.625 to 60.875, 43 × 45 cells. Its edges are footprint cell edges, so the
 sum keeps the total exactly. This grid is the grid of every raster in
-`inst/extdata/`: `uk_nuts1_cover.R` crops the cover to it, and
-`ciara_footprint_uk.R` crops the footprint to the cover.
+`inst/extdata/` but `burns_day_footprint.tif`: `uk_nuts1_cover.R` crops the
+cover to it, and `ciara_footprint_uk.R` crops the footprint to the cover.
 
 It needs `download_litpop.sh` and `convert_litpop.py` from
 `inst/scripts/data-raw/` to have been run. An existing output file is not
@@ -75,6 +76,28 @@ in `data-raw/`. An existing output file is not made again. It gave:
 ```
 Wrote inst/extdata/ciara_footprint_uk.tif (11.9 kB): 45 x 43 cells, the 750 with UK land unchanged from the full footprint. Highest gust there 38.4 m/s.
 ```
+
+## burns_day_footprint.R
+
+Writes `burns_day_footprint.tif`, the footprint of the Burns' Day storm
+(January 1990, track 1070) on the full footprint grid, 0.25° cells from 25°W
+to 35°E and 30°N to 70°N, 161 × 241 cells, uncropped. It is the only raster
+in `inst/extdata/` not on the UK grid. `vignettes/articles/storm-footprints.Rmd`
+reads it, to show a whole footprint, with the cells more than 1000 km from
+the track left without values.
+
+It needs `unzip_footprints.sh` from `inst/scripts/data-raw/` to have been
+run. It writes nothing if the footprint is not 161 × 241 cells, or if the
+values written differ from the footprint's. An existing output file is not
+made again. It gave:
+
+```
+Wrote inst/extdata/burns_day_footprint.tif (77.1 kB): 161 x 241 cells, 18531 with a value. Highest gust 43.6 m/s.
+```
+
+The highest gust is over the whole grid, sea included; the storm's
+`max_gust` in `uk_storm_values.csv`, over cells at least half UK land, is
+43.5 m/s.
 
 ## uk_storm_values.R
 

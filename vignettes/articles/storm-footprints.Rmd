@@ -7,6 +7,14 @@ knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>"
 )
+library(terra)
+library(ggplot2)
+library(tidyterra)
+devtools::load_all(quiet = TRUE)
+
+burns_day_file <- system.file("extdata", "burns_day_footprint.tif",
+                              package = "njord")
+countries <- rnaturalearth::ne_countries(scale = "medium", returnclass = "sf")
 ```
 
 ## The dataset
@@ -126,6 +134,19 @@ can be compared or stacked cell by cell without any regridding.
 Only the cells near the storm have values. Cells more than 1000 km from the
 track are `NaN`, so a footprint says nothing about gusts far from the storm,
 and a storm that passed well away from the UK has no UK values at all.
+
+The figure shows one footprint, from 40°N to 70°N: the Burns' Day storm of
+25 January 1990 (track 1070), the storm with the largest modelled UK loss in
+the catalogue.
+
+```{r burns-day, echo = FALSE, fig.cap = "Burns' Day storm footprint: the maximum 10 m gust over the 72 hours of the storm (C3S windstorm reanalysis, Hodges track 1070), m/s, from 40°N to 70°N. Cells more than 1000 km from the track have no value."}
+ggplot() +
+  geom_spatraster(data = rast(burns_day_file)) +
+  geom_sf(data = countries, fill = NA, colour = "white", linewidth = 0.2) +
+  coord_sf(xlim = c(-25, 35), ylim = c(40, 70), expand = FALSE) +
+  scale_fill_viridis_c(name = "Gust (m/s)", na.value = "transparent") +
+  theme_minimal()
+```
 
 The file does not say which cells are land. A land-sea mask has to come from
 somewhere else before gusts over the UK can be picked out.
