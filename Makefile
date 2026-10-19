@@ -2,7 +2,7 @@ NIX = nix develop -c
 R = $(NIX) Rscript -e
 DEMOS = $(wildcard inst/demos/*.R)
 
-.PHONY: document check readme articles demos
+.PHONY: document check readme articles demos clean-articles
 
 document:
 	$(R) 'devtools::document()'
@@ -20,3 +20,6 @@ vignettes/articles/%.html: vignettes/articles/%.Rmd
 
 demos:
 	$(NIX) sh -c 'for f in $(DEMOS); do echo "== $$f"; Rscript "$$f" || exit 1; done'
+
+clean-articles:
+	rm -f vignettes/articles/*.html
