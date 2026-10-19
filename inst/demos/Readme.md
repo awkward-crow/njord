@@ -1,8 +1,9 @@
 # Demos
 
 These scripts demonstrate the package functions. They write nothing; each
-prints a short report with `message()`, so it goes to stderr, and
-`calibration_demo.R` also prints a table to stdout. They load the
+prints a short report with `message()`, so it goes to stderr,
+`calibration_demo.R` also prints a table to stdout and `ciara_demo.R` plots
+the footprint when run in an interactive session. They load the
 package with `devtools::load_all()`, so they run without njord being
 installed.
 
@@ -17,16 +18,19 @@ The data they read are made by the [data scripts](../scripts/Readme.md).
 Runs Storm Ciara (February 2020, track 1758) through from footprint to
 modelled loss.
 
-It first gives the trigger index, the UK mean gust: the footprint gust
-averaged over the 750 cells with UK land, each weighted by its land cover and
-the cosine of its latitude (`area_weights()`, `weighted_mean_index()`). It
+It first gives the trigger index, the exposure-weighted UK mean gust: the
+footprint gust averaged over the 728 cells with UK assets, each weighted by
+the value of its LitPop assets (`exposure_weights()`,
+`weighted_mean_index()`). It
 then gives the loss to UK assets under the Schwierz vulnerability curve
 (`schwierz_mdr()`) with the mean damage degree scaled by `mdd_scale = 0.8`,
 the UK calibration against PERILS losses with the RMSE cost function, read
 from Fig. 3n of Mishra et al. (2026). The LitPop exposure is summed to the
 footprint grid, 6 × 6 LitPop cells to each footprint cell, which keeps the
 total exactly, and both gusts and assets are restricted to the cells with UK
-land, so the curve is not applied to sea cells. Losses are in USD.
+assets, so the curve is not applied to sea cells. Losses are in USD. In an
+interactive session it also plots the footprint with the UK coastline from
+rnaturalearth.
 
 It reads the three rasters in `inst/extdata/` written by
 `uk_litpop_025deg.R`, `uk_nuts1_cover.R` and `ciara_footprint_uk.R` in
@@ -36,7 +40,7 @@ CDS account.
 It gives:
 
 ```
-Storm Ciara (track 1758): UK mean gust index 31.34 m/s, over 750 cells with UK land.
+Storm Ciara (track 1758): exposure-weighted UK mean gust index 31.94 m/s, over 728 cells with UK assets.
 UK assets 9472 USD bn; highest UK gust 38.4 m/s.
 Modelled loss 0.460 USD bn (Schwierz, mdd_scale 0.8).
 ```

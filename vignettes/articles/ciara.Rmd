@@ -19,10 +19,9 @@ uk <- rnaturalearth::ne_countries(country = "United Kingdom",
 
 ## Hazard: the Ciara footprint
 
-<!-- The ranks below are typed in from data-raw/uk_storm_values.csv (written
-by inst/scripts/data-raw/uk_storm_values.R). They could be computed here
-instead, if that CSV (about 150 kB) were added to inst/extdata by
-inst/scripts/extdata/prepare_extdata.R.
+<!-- The ranks below are typed in. They could be computed here from
+inst/extdata/uk_storm_values.csv (written by
+inst/scripts/extdata/uk_storm_values.R).
 
 By storm severity index the two storms above Ciara are tracks 926 and 927,
 both January 1984 (start dates 12 and 14 January). They may be one storm
@@ -43,28 +42,26 @@ ggplot() +
   theme_minimal()
 ```
 
-## Trigger: the UK mean gust index
+## Trigger: the exposure-weighted UK mean gust index
 
-The trigger index $I$ is the footprint gust averaged over UK land. Each
-0.25° cell $i$ that covers some UK land has weight $w_i = f_i \cos\phi_i$,
-where $f_i$ is the fraction of the cell that is UK land and $\phi_i$ its
-latitude; $\cos\phi_i$ is proportional to the cell's area. Then
-$I = \sum_i w_i v_i / \sum_i w_i$, with $v_i$ the cell's gust. Cells with no
-gust value are left out.
+The trigger index $I$ is the footprint gust averaged over the UK assets. Each
+0.25° cell $i$ that holds UK assets has weight $w_i$, the value of its
+LitPop assets. Then $I = \sum_i w_i v_i / \sum_i w_i$, with $v_i$ the cell's
+gust. Cells with no gust value are left out.
 
 ```{r index, echo = TRUE}
-wts <- area_weights(cover_file, regions = "UK")
+wts <- exposure_weights(cover_file, assets_file, regions = "UK")
 index <- weighted_mean_index(values(rast(fp_file), mat = FALSE), wts)
 ```
 
 For Ciara the index is `r round(index, 1)` m/s over `r length(wts$idx)`
-cells with UK land cover.
+cells with UK assets.
 
 The payout is a linear ramp: nothing below the attachment $A$, the full
 limit $L$ above the exhaustion $E$, and a straight line between them,
 $P(I) = L \min(1, \max(0, (I - A)/(E - A)))$.
 
-```{r ramp, fig.cap = "Linear ramp payout against the UK mean gust index. The attachment (22 m/s) and exhaustion (28 m/s) are illustrative; calibrating them to storm losses with `calibrate_trigger()` is still to be done. Storm Ciara's index is the dashed line."}
+```{r ramp, fig.cap = "Linear ramp payout against the exposure-weighted UK mean gust index. The attachment (22 m/s) and exhaustion (28 m/s) are illustrative; calibrating them to storm losses with `calibrate_trigger()` is still to be done. Storm Ciara's index is the dashed line."}
 attachment <- 22
 exhaustion <- 28
 ramp <- data.frame(index = seq(15, 35, by = 0.1))
@@ -73,7 +70,7 @@ ggplot(ramp, aes(index, payout)) +
   geom_line() +
   geom_vline(xintercept = index, linetype = "dashed") +
   annotate("text", x = index, y = 0.5, label = "Ciara", hjust = 1.1) +
-  labs(x = "UK mean gust index (m/s)", y = "Payout / limit") +
+  labs(x = "Exposure-weighted UK mean gust index (m/s)", y = "Payout / limit") +
   theme_minimal()
 ```
 
