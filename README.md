@@ -127,9 +127,9 @@ ecmwfr::wf_set_key(user = "<your-cds-uid>", key = "<your-api-key>",
 
 Hazard data come from the Copernicus Climate Change Service (C3S)
 Enhanced Windstorm Service (EWS) dataset
-(`sis-european-wind-storm-reanalysis`; van den Brink, 2019; Copernicus
-Climate Change Service, 2025), derived from the ERA5 global reanalysis
-(Hersbach et al., 2020).
+(`sis-european-wind-storm-reanalysis`; Copernicus Climate Change
+Service, 2025), derived from the ERA5 global reanalysis (Hersbach et
+al., 2020).
 
 For each identified storm event the dataset provides:
 
@@ -306,8 +306,7 @@ the historical event set as training data.
 
 #### 4. Basis risk decomposition
 
-Following Bouchard and Romanic (2023), the total basis risk variance can
-be decomposed into:
+The total basis risk variance can be decomposed into:
 
 - **Geographic basis risk** — mismatch between the location of losses
   and the spatial footprint measured by the trigger index.
@@ -372,12 +371,10 @@ Aznar-Siguan, G. and Bresch, D. N. (2019). CLIMADA v1: a global weather
 and climate risk assessment platform. *Geoscientific Model Development*,
 12(7), 3085–3097. <https://doi.org/10.5194/gmd-12-3085-2019>
 
-Bouchard, T. and Romanic, D. (2023). Decomposing basis risk in
-parametric insurance products. *Risk Analysis*, 43(4), 812–831.
-
-Copernicus Climate Change Service (2025). *European Windstorm Service:
-sis-european-wind-storm-reanalysis*. Copernicus Climate Change Service
-(C3S) Climate Data Store. <https://doi.org/10.24381/cds.8b5d8c28>
+Copernicus Climate Change Service (2025). *Windstorm tracks and
+footprints derived from reanalysis over Europe between 1940 to present*.
+Copernicus Climate Change Service (C3S) Climate Data Store.
+<https://doi.org/10.24381/bf1f06a9>
 
 Eberenz, S., Stocker, D., Röösli, T. and Bresch, D. N. (2020). Asset
 exposure data for global physical risk assessment. *Earth System Science
@@ -414,7 +411,3 @@ Schwierz, C., Köllner-Heck, P., Zenklusen Mutter, E., Bresch, D. N.,
 Vidale, P.-L., Wild, M. and Schär, C. (2010). Modelling European winter
 wind storm losses in current and future climate. *Climatic Change*,
 101(3–4), 485–514. <https://doi.org/10.1007/s10584-009-9712-1>
-
-van den Brink, H. (2019). Description of the Enhanced Windstorm Service
-reanalysis dataset. Copernicus Climate Change Service (C3S).
-<https://doi.org/10.24381/cds.8b5d8c28>
