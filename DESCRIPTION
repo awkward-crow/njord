@@ -2,8 +2,7 @@ Package: njord
 Title: Parametric Windstorm Trigger Design and Basis Risk Quantification
 Version: 0.0.0.9000
 Authors@R: 
-    person("Michael", "Campbell", , "your@email.com", role = c("aut", "cre"),
-           comment = c(ORCID = ""))
+    person("Michael", "Campbell", , "m.campbell@tutanota.com", role = c("aut", "cre"))
 Description: Parametric trigger design and basis risk quantification for UK and
     European windstorm, using ERA5/Copernicus CDS hazard footprint data. Fits
     frequency and severity models to historical storm catalogues, simulates
