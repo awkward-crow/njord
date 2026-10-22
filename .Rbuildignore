@@ -2,3 +2,11 @@
 ^README\.Rmd$
 ^vignettes/articles$
 ^Makefile$
+^checks$
+^data-raw$
+^local$
+^flake\.nix$
+^flake\.lock$
+^fonts\.nix$
+^download_summary\.R$
+^docs$

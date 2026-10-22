@@ -194,7 +194,8 @@ Burns' Day storm of 25 January 1990.
 ## uk_exposure_gust.R
 
 Computes each storm's UK exposure-weighted mean gust, the trigger index of
-`inst/demos/calibration_demo.R`. The output is a CSV with one row per storm:
+the UK cover in the vignette (`vignettes/njord-method.Rmd`). The output is
+a CSV with one row per storm:
 
 | Column             | Meaning                                                |
 |--------------------|--------------------------------------------------------|
@@ -234,8 +235,8 @@ the assets are: Ciara's is 31.94 m/s here and 31.34 m/s by area.
 ## ew_exposure_gust.R
 
 Computes each storm's England and Wales exposure-weighted mean gust, the
-trigger index of the England and Wales cover in
-`inst/demos/calibration_demo.R`. The output is a CSV with one row per storm:
+trigger index of the England and Wales cover in the vignette
+(`vignettes/njord-method.Rmd`). The output is a CSV with one row per storm:
 
 | Column             | Meaning                                                 |
 |--------------------|---------------------------------------------------------|
@@ -267,8 +268,9 @@ Northern Ireland.
 ## sco_exposure_gust.R
 
 Computes each storm's Scotland exposure-weighted mean gust, the trigger
-index of the Scotland cover in `inst/demos/calibration_demo.R`. The output
-is a CSV with one row per storm:
+index of the Scotland cover in the vignette (`vignettes/njord-method.Rmd`)
+and in `inst/demos/calibration_demo.R`. The output is a CSV with one row
+per storm:
 
 | Column              | Meaning                                                |
 |---------------------|--------------------------------------------------------|

@@ -4,12 +4,12 @@
 \name{njord-package}
 \alias{njord}
 \alias{njord-package}
-\title{njord: Parametric Windstorm Trigger Design and Basis Risk Quantification}
+\title{njord: Design Parametric Windstorm Covers for Regions of the UK}
 \description{
-Parametric trigger design and basis risk quantification for UK and European windstorm, using ERA5/Copernicus CDS hazard footprint data. Fits frequency and severity models to historical storm catalogues, simulates synthetic event sets, and compares parametric payout EP curves against indemnity benchmarks to quantify and decompose basis risk by source.
+Parametric windstorm cover design and basis risk measurement for regions of the UK, using public data. Builds a modelled loss for each storm from the Copernicus ERA5 windstorm footprints, LitPop asset values and a published damage curve. Sets the attachment and exhaustion of a linear-ramp cover over a layer of those losses by one of three calibration rules, and measures basis risk against what the layer would have recovered, in sample and out of sample by storm season.
 }
 \author{
-\strong{Maintainer}: Michael Campbell \email{your@email.com}
+\strong{Maintainer}: Michael Campbell \email{m.campbell@tutanota.com}
 
 }
 \keyword{internal}

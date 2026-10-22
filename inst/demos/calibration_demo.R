@@ -1,69 +1,45 @@
 # calibration_demo.R
 #
-# Calibrates triggers on exposure-weighted mean gust indices to modelled
-# losses over the storm catalogue, then shows the basis risk storm by storm:
-# first one cover for the whole UK, then two covers, one for England and
-# Wales and one for Scotland, whose payouts are added. Each index is the
-# footprint gust averaged over the region, each cell weighted by the value
-# of its LitPop assets there (exposure_weights()). The event set is the
-# storms of 1940-2025 with a UK maximum gust above 25 m/s, less those that
-# share a maximum gust with a nearby storm (shared_max_within_72h()); a
-# storm with no gust values in a region (NA in the CSV) has index 0 there.
-# Losses are under the Schwierz curve with the MDD scaled by mdd_scale (0.8,
-# as in ciara_demo.R), as a fraction of the total UK assets, so the covers'
-# amounts can be added. Each cover is a layer on its own region's losses:
-# it should pay the loss above the 1-in-attach_rp year loss (the retention)
-# up to the 1-in-exhaust_rp year loss, so its limit is the difference. The
-# attachment and exhaustion are the index levels of those two losses
-# (calibrate_trigger()), and the basis risk is the payout minus what the
-# layer would pay. In an interactive session it also plots, for each of the
-# three covers, the payout ramp and each storm's layer loss against the
-# index, for storms with an index of at least plot_min_index (ggplot2).
+# Calibrates a parametric cover for Scotland with
+# frequency_matching_calibration() and measures its basis risk over the
+# storm catalogue, in sample. The index is the exposure-weighted mean gust
+# over Scotland: the footprint gust averaged over the cells with assets
+# there, each weighted by the value of its LitPop assets (exposure_weights()).
+# The event set is the package's current definition: the storms of
+# 1940-2025 with a UK maximum gust above 25 m/s, less those that share a
+# maximum gust with a nearby storm (shared_max_within_72h()); a storm with
+# no gust values in Scotland (NA in the CSV) has index 0 there. Losses are
+# under the Schwierz curve with the MDD scaled by mdd_scale (0.8, as in
+# ciara_demo.R).
 #
-# Reads only inst/extdata, so it runs without data-raw/.
-# Uses the package functions through devtools::load_all().
+# The cover is a layer on Scotland's losses: it should pay the loss above
+# the 1-in-attach_rp year loss (the retention) up to the 1-in-exhaust_rp
+# year loss, so its limit is the difference; what it should pay a storm is
+# the storm's recovery. It prints the layer, the attachment and exhaustion
+# and the storms that set them, storms paid against storms recovering,
+# false payments, missed storms, RMS basis risk, RMS against a flat payout
+# of the mean recovery, paid over the layer's recoveries, the correlation of
+# payout with recovery and the storms with the largest losses.
 #
-# Run from the project root.
+# It plots each storm's recovery and payout against its index, with the
+# payout ramp; the January 2002 storm (track 1346) is marked, as its
+# modelled Scottish loss is not supported by observed gusts. Storms with an
+# index below plot_min_index, none of which is paid or recovers, are left
+# out. Base graphics only. The plot is
+# drawn in an interactive session only.
+#
+# The other regions, the other rules and the out-of-sample test are in the
+# vignette (vignettes/njord-method.Rmd).
+#
+# Reads only inst/extdata, so it runs without data-raw/ or a CDS account.
+# Takes a few seconds. Uses the package functions through
+# devtools::load_all(). Run from the project root.
 
 devtools::load_all(quiet = TRUE)
 
-# One column of a per-storm CSV, keyed by track id, under a new name.
-read_column <- function(file, name)
-  setNames(read.csv(file), c("track_id", name))
-
-# A layer cover on one region: the trigger calibrated on the region's
-# losses, and storm by storm the payout and what the layer would pay.
-layer_cover <- function(index_vec, loss_vec, attach_rp, exhaust_rp,
-                        events_per_year) {
-  loss_at <- function(rp)
-    unname(quantile(loss_vec, 1 - 1 / (rp * events_per_year)))
-  retention <- loss_at(attach_rp)
-  limit <- loss_at(exhaust_rp) - retention
-  trigger <- calibrate_trigger(index_vec, loss_vec, attach_rp = attach_rp,
-                               exhaust_rp = exhaust_rp,
-                               events_per_year = events_per_year)
-  br <- basis_risk(index_vec, pmin(pmax(loss_vec - retention, 0), limit),
-                   trigger$attachment, trigger$exhaustion, limit = limit)
-  names(br)[names(br) == "loss"] <- "layer_loss"
-  list(attachment = trigger$attachment, exhaustion = trigger$exhaustion,
-       retention = retention, limit = limit, table = br)
-}
-
-# Counts and amounts a year of a cover's table (amounts as fractions).
-cover_summary <- function(br, years)
-  c(pay = sum(br$payout > 0), recover = sum(br$layer_loss > 0),
-    missed = sum(br$payout == 0 & br$layer_loss > 0),
-    paid_small = sum(br$payout > 0 & br$layer_loss == 0),
-    paid = sum(br$payout) / years, layer = sum(br$layer_loss) / years,
-    cor = cor(br$payout, br$layer_loss))
-
 file_names <- c(values = "uk_storm_values.csv",
-                uk_index = "uk_exposure_gust.csv",
-                uk_loss = "uk_storm_losses.csv",
-                ew_index = "ew_exposure_gust.csv",
-                ew_loss = "ew_storm_losses.csv",
-                sco_index = "sco_exposure_gust.csv",
-                sco_loss = "sco_storm_losses.csv",
+                index = "sco_exposure_gust.csv",
+                loss = "sco_storm_losses.csv",
                 cover = "uk_nuts1_cover.tif",
                 assets = "uk_litpop_025deg.tif")
 files <- vapply(file_names, function(f)
@@ -74,7 +50,65 @@ gust_threshold <- 25
 mdd_scale <- 0.8
 attach_rp <- 5
 exhaust_rp <- 20
+jennifer <- 1346
+n_largest <- 5
 plot_min_index <- 25
+
+# One column of a per-storm CSV, keyed by track id, under a new name.
+read_column <- function(file, name)
+  setNames(read.csv(file), c("track_id", name))
+
+# The loss with return period rp years, as in the calibration functions.
+loss_at <- function(loss, rp, events_per_year)
+  unname(quantile(loss, 1 - 1 / (rp * events_per_year)))
+
+fmt <- function(x, digits = 2) formatC(x, format = "f", digits = digits)
+month_year <- function(t) format(t, "%b %Y")
+
+# Recovery (points) and payout (on the ramp) of each storm against its
+# index, in USD m, with the gap between them, the attachment and exhaustion
+# marked, the largest storms labelled above the limit, in order of index,
+# and track `marked` set apart.
+plot_cover <- function(d, attachment, exhaustion, limit, largest, marked,
+                       min_index) {
+  d <- d[d$index >= min_index, ]
+  blue <- "#1f5fa8"
+  grey <- "grey35"
+  red <- "#c0392b"
+  l <- d[d$event %in% largest & d$event != marked, ]
+  l <- l[order(l$index), ]
+  label_y <- limit * (1.1 + 0.09 * (seq_len(nrow(l)) - 1))
+  op <- par(mar = c(4.2, 4.2, 2.6, 1), mgp = c(2.6, 0.7, 0), las = 1)
+  on.exit(par(op))
+  plot(d$index, d$recovery, type = "n", xlab = "Storm's index (m/s)",
+       ylab = "USD m", ylim = c(0, max(label_y, limit) + 0.08 * limit),
+       main = "Scotland cover: what it pays and what the layer recovers",
+       font.main = 1, cex.main = 1.05, bty = "l")
+  abline(v = c(attachment, exhaustion), lty = 2, col = "grey70")
+  text(c(attachment, exhaustion), 0.5 * limit,
+       c("attachment", "exhaustion"), pos = c(2, 4), cex = 0.8, col = grey)
+  gap <- d$payout != d$recovery
+  segments(d$index[gap], d$recovery[gap], d$index[gap], d$payout[gap],
+           col = "grey75")
+  x <- c(min_index, attachment, exhaustion, max(d$index))
+  lines(x, payout(x, attachment, exhaustion, limit), col = blue, lwd = 2)
+  points(d$index[d$payout > 0], d$payout[d$payout > 0], pch = 16, cex = 0.8,
+         col = blue)
+  other <- d$event != marked
+  points(d$index[other], d$recovery[other], pch = 1, cex = 0.8, col = grey)
+  segments(l$index, l$recovery, l$index, label_y, col = "grey75", lty = 3)
+  text(l$index, label_y, month_year(l$central_time), pos = 4, offset = 0.2,
+       cex = 0.75, col = grey)
+  m <- d[d$event == marked, ]
+  points(m$index, m$recovery, pch = 23, cex = 1.4, bg = red, col = red)
+  text(m$index, m$recovery - 0.06 * limit,
+       paste0(month_year(m$central_time), "\nmodelled loss not\n",
+              "supported by\nobserved gusts"),
+       adj = c(1, 1), cex = 0.75, col = red)
+  legend("topleft", c("payout (on the ramp)", "layer's recovery"),
+         pch = c(16, 1), col = c(blue, grey), lty = c(1, NA), lwd = c(2, NA),
+         bty = "n", cex = 0.8)
+}
 
 if (any(files == "")) {
   message("Files missing from inst/extdata: ",
@@ -83,90 +117,76 @@ if (any(files == "")) {
 } else {
   storms <- read.csv(files[["values"]])
   storms$central_time <- as.POSIXct(storms$central_time, tz = "UTC")
-  for (k in c("uk_index", "uk_loss", "ew_index", "ew_loss", "sco_index",
-              "sco_loss"))
-    storms <- merge(storms, read_column(files[[k]], k))
-
-  year <- lubridate::year(storms$central_time)
+  storms <- merge(merge(storms, read_column(files[["index"]], "index")),
+                  read_column(files[["loss"]], "loss"))
+  year <- as.POSIXlt(storms$central_time)$year + 1900
   events <- subset(storms, !shared_max_within_72h(storms) &
                      max_gust > gust_threshold &
                      year >= first_year & year <= last_year)
-  years <- last_year - first_year + 1
+  years <- sum(season_folds(first_year, last_year)$years)
   events_per_year <- nrow(events) / years
   total_assets <- sum(exposure_weights(files[["cover"]], files[["assets"]],
                                        regions = "UK")$weight)
-  bn <- function(x) round(x * total_assets / 1e9, 3)
+  usd_m <- function(x) x * total_assets / 1e6
 
-  cover <- function(region) {
-    index_vec <- setNames(events[[paste0(region, "_index")]], events$track_id)
-    index_vec[is.na(index_vec)] <- 0
-    loss_vec <- setNames(mdd_scale * events[[paste0(region, "_loss")]] /
-                           total_assets, events$track_id)
-    layer_cover(index_vec, loss_vec, attach_rp, exhaust_rp, events_per_year)
+  index <- ifelse(is.na(events$index), 0, events$index)
+  loss <- mdd_scale * events$loss / total_assets
+  retention <- loss_at(loss, attach_rp, events_per_year)
+  limit <- loss_at(loss, exhaust_rp, events_per_year) - retention
+  levels <- frequency_matching_calibration(
+    setNames(index, events$track_id), setNames(loss, events$track_id),
+    attach_rp = attach_rp, exhaust_rp = exhaust_rp,
+    events_per_year = events_per_year)
+  p <- payout(index, levels$attachment, levels$exhaustion, limit)
+  r <- pmin(pmax(loss - retention, 0), limit)
+  setter <- function(level) {
+    k <- index == level
+    paste0("track ", paste(events$track_id[k], collapse = " "), " (",
+           paste(month_year(events$central_time[k]), collapse = ", "), ")")
   }
-  covers <- lapply(c(uk = "uk", ew = "ew", sco = "sco"), cover)
-  regional <- covers$ew$table
-  regional$index <- NULL
-  regional$payout <- covers$ew$table$payout + covers$sco$table$payout
-  regional$layer_loss <- covers$ew$table$layer_loss +
-    covers$sco$table$layer_loss
-  regional$basis_risk <- regional$payout - regional$layer_loss
 
-  describe_trigger <- function(cv)
-    paste0("attachment ", round(cv$attachment, 2), " m/s, exhaustion ",
-           round(cv$exhaustion, 2), " m/s; layer USD ", bn(cv$limit),
-           " bn xs USD ", bn(cv$retention), " bn.")
-  describe_basis <- function(s)
-    paste0(s[["pay"]], " storms pay out, ", s[["recover"]],
-           " would recover; ", s[["missed"]], " of those pay nothing, ",
-           s[["paid_small"]], " with no recovery pay something. Paid a ",
-           "year: trigger USD ", bn(s[["paid"]]), " bn, layer USD ",
-           bn(s[["layer"]]), " bn; correlation ", round(s[["cor"]], 3), ".")
-  s <- lapply(covers, function(cv) cover_summary(cv$table, years))
-  message(nrow(events), " storms, ", round(events_per_year, 2), " a year.\n",
-          "UK: ", describe_trigger(covers$uk), "\n  ", describe_basis(s$uk),
-          "\nEngland and Wales: ", describe_trigger(covers$ew), "\n  ",
-          describe_basis(s$ew),
-          "\nScotland: ", describe_trigger(covers$sco), "\n  ",
-          describe_basis(s$sco),
-          "\nEngland and Wales plus Scotland: ",
-          describe_basis(cover_summary(regional, years)))
+  message(
+    "Basis risk here is measured against a modelled loss from the same ",
+    "ERA5 gust field as the index, not against real losses.\n",
+    "Scotland cover, frequency_matching_calibration(), on ", nrow(events),
+    " storms of ", first_year, "-", last_year, " (", fmt(events_per_year),
+    " a year); amounts in USD.\n",
+    "Layer:        USD ", fmt(usd_m(limit), 1), " m xs USD ",
+    fmt(usd_m(retention), 1), " m (the 1-in-", attach_rp, " to 1-in-",
+    exhaust_rp, " year Scottish loss)\n",
+    "Attachment:   ", fmt(levels$attachment), " m/s, set by ",
+    setter(levels$attachment), "\n",
+    "Exhaustion:   ", fmt(levels$exhaustion), " m/s, set by ",
+    setter(levels$exhaustion), "\n",
+    "Storms paid / storms recovering:      ", sum(p > 0), " / ", sum(r > 0),
+    "\n",
+    "False payments (paid, no recovery):   ", sum(p > 0 & r == 0), "\n",
+    "Missed storms (recovery, not paid):   ", sum(r > 0 & p == 0), "\n",
+    "RMS basis risk:                       USD ",
+    fmt(usd_m(sqrt(mean((p - r)^2))), 1), " m a storm\n",
+    "RMS against a flat payout:            ",
+    fmt(sqrt(sum((p - r)^2) / sum((mean(r) - r)^2))), "\n",
+    "Paid / layer:                         ", fmt(sum(p) / sum(r)), "\n",
+    "Correlation of payout with recovery:  ", fmt(cor(p, r)), "\n",
+    "(A flat payout pays every storm the mean recovery.)")
 
-  top <- order(-events$uk_loss)[1:10]
-  print(data.frame(event = events$track_id[top],
-                   uk_index = covers$uk$table$index[top],
-                   ew_index = covers$ew$table$index[top],
-                   sco_index = covers$sco$table$index[top],
-                   uk_payout = bn(covers$uk$table$payout[top]),
-                   uk_layer = bn(covers$uk$table$layer_loss[top]),
-                   regional_payout = bn(regional$payout[top]),
-                   regional_layer = bn(regional$layer_loss[top]),
-                   storm_loss = bn(mdd_scale * events$uk_loss[top] /
-                                     total_assets)), digits = 3)
+  largest <- order(-loss)[seq_len(n_largest)]
+  message("\nThe ", n_largest, " storms with the largest Scottish loss, in USD m:")
+  show <- data.frame(track = events$track_id[largest],
+                     date = month_year(events$central_time[largest]),
+                     index = fmt(index[largest]),
+                     loss = fmt(usd_m(loss[largest]), 1),
+                     recovery = fmt(usd_m(r[largest]), 1),
+                     payout = fmt(usd_m(p[largest]), 1))
+  message(paste(capture.output(print(show, row.names = FALSE)),
+                collapse = "\n"))
+  if (jennifer %in% events$track_id[largest])
+    message("Track ", jennifer, " (January 2002): its modelled Scottish ",
+            "loss is not supported by observed gusts.")
 
-  if (interactive()) {
-    labels <- c(uk = "UK", ew = "England and Wales", sco = "Scotland")
-    by_cover <- function(f)
-      do.call(rbind, lapply(names(labels), function(k)
-        data.frame(cover = factor(labels[[k]], labels), f(covers[[k]]))))
-    storm_points <- by_cover(function(cv)
-      data.frame(index = cv$table$index, layer_loss = bn(cv$table$layer_loss)))
-    ramps <- by_cover(function(cv) {
-      x <- c(plot_min_index, cv$attachment, cv$exhaustion, max(cv$table$index))
-      data.frame(index = x,
-                 payout = bn(payout(x, cv$attachment, cv$exhaustion, cv$limit)))
-    })
-    print(ggplot2::ggplot() +
-            ggplot2::geom_point(
-              data = subset(storm_points, index >= plot_min_index),
-              ggplot2::aes(index, layer_loss), alpha = 0.4, size = 1) +
-            ggplot2::geom_line(data = ramps, ggplot2::aes(index, payout),
-                               colour = "firebrick") +
-            ggplot2::facet_wrap(~cover, ncol = 1, scales = "free_y") +
-            ggplot2::labs(x = "Exposure-weighted mean gust index (m/s)",
-                          y = "USD bn",
-                          title = paste("Trigger payout (line) and layer loss",
-                                        "(points), storm by storm")) +
-            ggplot2::theme_minimal())
-  }
+  d <- data.frame(event = events$track_id, central_time = events$central_time,
+                  index = index, recovery = usd_m(r), payout = usd_m(p))
+  if (interactive())
+    plot_cover(d, levels$attachment, levels$exhaustion, usd_m(limit),
+               events$track_id[largest], jennifer, plot_min_index)
 }

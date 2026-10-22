@@ -2,413 +2,74 @@
 output: github_document
 ---
 
-<!-- README.md is generated from README.Rmd. Please edit that file -->
-
-```{r, include = FALSE}
-knitr::opts_chunk$set(
-  collapse = TRUE,
-  comment = "#>",
-  fig.path = "man/figures/README-",
-  out.width = "100%"
-)
-```
-
 # njord
 
-<!-- badges: start -->
-[![Lifecycle: experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE.md)
-<!-- badges: end -->
+**Design parametric windstorm covers for regions of the UK.**
 
-**njord** is an R package for designing parametric windstorm covers for the
-UK and measuring their basis risk.
+njord is an R package built entirely on public data: the Copernicus ERA5
+windstorm reanalysis, LitPop asset values and a published damage curve. It
+turns 86 years of storms (1940-2025) into modelled losses, designs a
+parametric cover for a region and measures its *basis risk*: the gap between
+what the cover pays and what the layer of losses it stands in for would have
+recovered.
 
-## Summary
+![Scotland cover, 1940-2025: payout (on the ramp) and layer recovery by storm against its index. January 2002 (red) has a modelled loss not supported by observed gusts.](man/figures/scotland-cover.png)
 
-Parametric insurance pays out on a measured index, here the strength of a
-storm's winds, rather than on the losses the policyholder actually suffers.
-That makes payment fast and simple, but the payout can differ from the
-loss: this gap is *basis risk*. In njord a model of UK windstorm losses is
-built from public data and used to design parametric covers and to measure
-their basis risk.
+## In brief
 
-- **Storms.** Wind gust footprints for 1,905 storms since 1940 are taken
-  from the Copernicus European windstorm reanalysis, based on ERA5.
-- **Losses.** Each footprint is combined with the value of UK assets
-  (LitPop) and a published damage curve (Schwierz et al., 2010), scaled to
-  a recent recalibration against UK industry losses, to give a modelled
-  loss for every storm.
-- **Covers.** The trigger index is the storm's peak gust averaged over a
-  region, each place weighted by the value of its assets. Each cover is
-  designed to pay a layer of its region's losses, from the 1-in-5 year loss
-  to the 1-in-20 year loss, with the payout rising in a straight line
-  between two index levels set from the storm history.
-- **Results.** Three covers were calibrated over 1,323 storms with a UK
-  gust above 25 m s⁻¹: one for the whole UK, one for Scotland and one for
-  England and Wales. The same storms are used for every cover; a storm that
-  missed a region simply has a low index and a small loss there. The
-  covers differ in size, so each is judged against its own layer. By
-  design, each layer is reached by about one storm in five years, 18
-  storms in all.
-  - *Scotland* works well: 22 storms pay out against 18, it pays about
-    what its layer would each year and tracks it closely.
-  - *England and Wales* has some way to go: 65 storms pay out against 18,
-    it pays about three times what its layer would and tracks it poorly.
-  - *The UK cover* pays the largest storms in full, but 120 storms pay out
-    against 18, it pays about four times its layer, and it misses the
-    January 2002 storm that hit Scotland hardest.
-- **Next.** Losses grow much faster than the gust, and England and Wales is
-  a large, varied region, so a mean gust is probably a poor guide to its
-  losses. Indices that give the highest gusts more weight and smaller
-  regions are the next steps (see [Planned refinements](#planned-refinements)).
+- **Three ways to set a cover's trigger levels,** each tested out of
+  sample: the lowest index among the storms above each loss level
+  (`min_index_calibration()`), index levels exceeded as often as those
+  losses (`frequency_matching_calibration()`, the recommended rule) and a
+  best-fit ramp (`fitted_ramp_calibration()`).
+- **Scotland works, in the model's own terms.** In sample, the
+  frequency-matched cover pays 18 storms against the 18 that would recover
+  (2 false payments, 2 missed), at 1.03 times the layer, with correlation
+  0.98. Left out of 17 blocks of five storm seasons in turn, its error is
+  0.21 of a flat payout's (90% interval 0.13 to 0.31).
+- **England and Wales is harder.** The same rule's out-of-sample error is
+  0.78 of a flat payout's (0.55 to 1.11), so the index adds little there.
+- **A single UK-wide cover tracks losses poorly:** in-sample correlation
+  0.72, against 0.98 for Scotland.
 
-## Running the demos
+## Status and limits
 
-Two demonstration scripts in [`inst/demos/`](inst/demos/Readme.md) show the
-package at work. They read only the small files in `inst/extdata/`, so they
-run from a fresh checkout without a CDS account or the raw data.
+Work in progress. Basis risk here is measured against a modelled loss built
+from the same ERA5 gust field as the index, so the results say how well the
+*method* works, not how a cover would pay on real losses. ERA5 gusts differ
+from observed station gusts by several m/s for individual storms, and about
+a third of the storms the Met Office named in the last ten seasons have no
+track in the Hodges product the package uses. The
+[vignette](docs/njord-method.md) has the evidence and the planned
+refinements.
 
-They need R with the packages in `DESCRIPTION` (Imports and Suggests) and
-devtools. Run them from the project root:
-
-```bash
-Rscript inst/demos/ciara_demo.R
-Rscript inst/demos/calibration_demo.R
-```
-
-or, in an R session started in the project root,
+## Quick start
 
 ```r
-source("inst/demos/ciara_demo.R")
-source("inst/demos/calibration_demo.R")
+# install.packages("remotes")
+remotes::install_github("awkward-crow/njord")
 ```
 
-Alternatively, use the Nix flake (see
-[Development environment](#development-environment)):
+Run the demos from a clone. They read only the small files in
+`inst/extdata/`, so no data download or Copernicus account is needed:
 
 ```bash
-nix develop --command Rscript inst/demos/ciara_demo.R
+git clone https://github.com/awkward-crow/njord && cd njord
+nix develop --command Rscript inst/demos/calibration_demo.R  # the Scotland cover and plot, seconds
+nix develop --command Rscript inst/demos/ciara_demo.R        # Storm Ciara, footprint to loss
 ```
 
-or `make demos`, which runs both in the flake.
+Without Nix, install R and the packages in `DESCRIPTION` and run the same
+scripts with `Rscript`.
 
-- `ciara_demo.R` takes Storm Ciara (February 2020) from footprint to
-  modelled loss: its exposure-weighted UK gust index (31.94 m s⁻¹) and its
-  loss to UK assets (USD 0.46 bn).
-- `calibration_demo.R` calibrates the UK cover and the two regional covers
-  to the storm catalogue and reports their basis risk, with the ten storms
-  of largest loss in a table. The figures in [Basis risk](#basis-risk) come
-  from it.
+## More detail
 
-Each prints a short report. Run with `source()` in an interactive R
-session, each also draws a plot; `Rscript` and `make demos` give the report
-only. The scripts that make the files in `inst/extdata/` from the
-raw data are described in [`inst/scripts/`](inst/scripts/Readme.md).
+The [vignette](docs/njord-method.md) covers the data, the damage model, the
+trigger and the three rules, all the regions, out-of-sample testing, the
+limits above and the planned refinements.
 
-## Development environment
+## Use of AI tools
 
-The package uses a [Nix flake](https://nixos.org/) to pin all system
-dependencies (R, system libraries, fonts) to a reproducible state.
-With Nix installed, enter the development shell with:
-
-```bash
-nix develop
-```
-
-ERA5 data are downloaded via the ECMWF Climate Data Store (CDS) API using
-the [`ecmwfr`](https://bluegreen-labs.github.io/ecmwfr/) package. A CDS
-account and personal access token are needed only to download the raw data
-(`inst/scripts/data-raw/`), not to run the demos:
-
-```r
-options(keyring_backend = "file")
-ecmwfr::wf_set_key(user = "<your-cds-uid>", key = "<your-api-key>",
-                   service = "cds")
-```
-
-## Technical appendix
-
-### Data
-
-#### ERA5 windstorm reanalysis
-
-Hazard data come from the Copernicus Climate Change Service (C3S) Enhanced
-Windstorm Service (EWS) dataset
-(`sis-european-wind-storm-reanalysis`; Copernicus Climate Change Service,
-2025), derived from the ERA5 global
-reanalysis (Hersbach et al., 2020).
-
-For each identified storm event the dataset provides:
-
-- **Footprints** — the maximum 10-metre wind gust (m s⁻¹) over a
-  72-hour window centred on the storm's peak land impact,
-  on a 0.25° × 0.25° grid (~28 km). Njord uses the native ERA5
-  resolution (0.25°) product. Each footprint is restricted to a
-  1000 km radius around the storm track to avoid
-  cross-contamination between contemporaneous events.
-
-- **Track catalogue** — 6-hourly positions, mean sea level pressure and
-  10 m gust speed at the storm centre for all tracked systems 1940–2025.
-  Two tracking algorithms are available: *Hodges* (TRACK; Hodges, 1995, 1999)
-  which follows 850 hPa relative vorticity and *TempestExtremes*
-  which tracks MSLP minima. Njord uses the Hodges product, consistent with
-  CLIMADA's default configuration and Mishra et al. (2026).
-
-- **Summary indicators** — pre-computed annual storm counts, mean gust,
-  Storm Severity Index (SSI), normalised SSI, area ratio and wind gust
-  ratio, aggregated by NUTS region (NUTS0/1/2) and wind speed threshold
-  (0, 15.6, 20, 25 m s⁻¹) for 1940–2025 (~170 000 rows).
-
-The footprint archive (downloaded via the `ecmwfr` package) currently
-comprises **723 monthly zip files** (from footprints_hodges_194002.zip through to
-footprints_hodges_202604.zip) each containing one or more NetCDF footprint
-files for storms active in that calendar month.
-
-### Vulnerability model
-
-The **Schwierz et al. (2010)** damage model is used to estimate the mean
-damage ratio (MDR) as a function of wind gust speed $v$:
-
-$$\text{MDR}(v) = \text{MDD}(v) \times \text{PAA}(v)$$
-
-where MDD (mean damage degree) is the expected fraction of asset value
-destroyed given that the asset is affected and PAA (percentage of assets
-affected) is the probability that an asset at this location suffers any
-damage at all. Both are empirically derived nonlinear lookup tables,
-originally calibrated against UK insurance losses from named storms in the
-period 1987–1990 (Schwierz et al., 2010) and subsequently validated across
-multiple European countries.
-
-The model is implemented in the open-source
-[CLIMADA](https://climada-python.readthedocs.io/) platform (ETH Zurich;
-Aznar-Siguan and Bresch, 2019) as `ImpfStormEurope.from_schwierz()`; njord
-uses the same curve nodes (`schwierz_mdr()`).
-
-The MDR surface is multiplied pointwise with the LitPop asset exposure
-(Eberenz et al., 2020) — a globally consistent dataset that disaggregates
-national asset values in proportion to nightlight intensity × population,
-used here at 150 arcsec (~5 km) and summed to the 0.25° footprint grid —
-to yield modelled monetary losses per grid cell and per event.
-The sum across the UK grid is the event-level **indemnity loss benchmark**.
-
-#### UK recalibration
-
-Mishra et al. (2026) recalibrate the Schwierz model against PERILS industry
-loss data (1999–2024) for 12 European countries using CLIMADA, with the same
-hazard (C3S EWS footprints) and exposure (LitPop) as njord. One parameter is
-fitted per country: the MDD curve is multiplied by a common factor and the
-PAA is left unchanged. The fit is made separately with RMSE and RMSLE cost
-functions. RMSE is driven by the largest events and fits the tail; RMSLE fits
-the frequent, mid-range events. For the UK both lower the curve: the maximum
-MDD is about 0.030 (RMSE) and 0.033 (RMSLE), against 0.0373 for the original,
-factors of about 0.8 and 0.88. The paper gives these only in a figure
-(Fig. 3m–n), so the factors are read by eye. njord uses `mdd_scale = 0.8`,
-the RMSE fit, since the trigger is concerned with the tail.
-
-### Trigger
-
-The trigger index in njord is an **exposure-weighted mean peak gust**,
-computed for each storm event over a region as:
-
-$$I = \frac{\sum_{i} w_i \cdot v_i}{\sum_i w_i}$$
-
-where $v_i$ is the footprint gust (the storm's maximum 10-metre gust over
-the 72-hour window) at grid cell $i$ and $w_i$ is the value of the LitPop
-assets in that cell within the region (`exposure_weights()`,
-`weighted_mean_index()`). The sum is over the cells with assets in the
-region; a cell on a regional border counts in each region by its share of
-the cell's UK land. Weighting by assets makes the index follow the gusts
-where the insured value is.
-
-Two designs are calibrated: one cover for the whole UK and a pair of covers,
-one for England and Wales and one for Scotland, each on its own regional
-index and losses, whose payouts are added.
-
-The parametric payout follows a **linear ramp** structure:
-
-$$P(I) = \begin{cases}
-0 & I < A \\
-L \cdot \dfrac{I - A}{E - A} & A \le I \le E \\
-L & I > E
-\end{cases}$$
-
-where $A$ is the attachment (trigger) level, $E$ is the exhaustion level and
-$L$ is the policy limit. Each cover is designed to pay a **layer** of its
-region's losses: the loss above the 1-in-5 year loss (the retention), up to
-the 1-in-20 year loss, so the limit $L$ is the difference between the two.
-`calibrate_trigger()` sets $A$ and $E$ at the index levels of those two
-losses: each is the lowest index among the storms whose loss exceeds the
-level. The return periods are illustrative and would be negotiated in a
-real transaction.
-
-### Basis risk
-
-For each storm event $e$, the basis risk of a cover is defined as:
-
-$$B_e = P_e - R_e$$
-
-where $P_e$ is the parametric payout and $R_e$ is what the layer would
-recover: the storm's modelled loss above the retention, capped at the limit
-(`basis_risk()`), both expressed as fractions of the total UK assets.
-Positive values indicate over-payment (the trigger pays more than the layer
-would); negative values indicate under-payment (the insured bears a loss the
-layer would have covered).
-
-The distribution of $B_e$ across the historical event set characterises the
-basis risk of the trigger design. It has two sources: storms whose index
-passes the attachment but whose loss stays below the retention, which are
-paid when the layer would pay nothing, and storms whose loss reaches the
-layer but whose index stays low, which are paid too little or nothing.
-
-Over the event set (1,323 storms, 1940–2025, the same for every cover) the
-UK cover pays the largest storms in full, but 120 storms pay out against 18
-that would recover, so it pays about four times what the layer would each
-year. Splitting the UK into an England and Wales cover and a Scotland cover
-roughly halves the number of storms paid with nothing to recover (49
-against 103). It also pays in full
-the storm that hit Scotland hardest (January 2002), which the UK cover
-misses. The Scotland cover tracks its layer closely; the England and Wales
-cover does not. The two regional covers together
-are, however, a bigger cover than the UK one: their limits add up to USD
-0.314 bn against 0.243 bn, and their layers would recover USD 0.036 bn a
-year against 0.028 bn. So each cover is best judged against its own layer
-rather than against the other. The figures come from
-`inst/demos/calibration_demo.R`.
-
-### Planned refinements
-
-The reference triggers are deliberately simple.
-A number of refinements could be considered.
-
-#### 1. Zonal trigger (NUTS1 regions)
-
-The two regional covers, England and Wales and Scotland, are a first step
-towards a zonal trigger. They already reduce geographic basis risk, the
-risk that a storm devastates one region while the UK-wide index stays below
-the attachment: the Scotland cover pays the January 2002 storm that the UK
-cover misses. The next step is a separate cover for each of the 12 UK NUTS1
-regions (e.g. North West England, Wales, South East England), each with its
-own index and layer, at the cost of additional complexity in the contract
-specification. England and Wales in particular is large and varied, and its
-cover tracks its losses much less closely than the Scotland cover does.
-
-#### 2. Multi-zone aggregate trigger
-
-Extend the zonal approach to an aggregate structure: the payout is triggered
-by a weighted sum of regional indices, with weights reflecting the insured
-exposure distribution. This is analogous to the zonal SSI structures used in
-some European cat bond transactions.
-
-#### 3. Trigger shape optimisation
-
-The linear ramp is a natural starting point but not necessarily optimal. A
-step trigger (binary payout at attachment) has maximum simplicity; a
-polynomial ramp can be calibrated to match the indemnity loss curve more
-closely in the tail. The optimal shape can be found by minimising the basis
-risk variance subject to an actuarial fairness constraint using the
-historical event set as training data.
-
-#### 4. Basis risk decomposition
-
-The total basis risk variance can be decomposed into:
-
-- **Geographic basis risk** — mismatch between the location of losses and the
-  spatial footprint measured by the trigger index.
-- **Temporal basis risk** — mismatch arising from the 72-hour integration
-  window versus the actual loss accumulation period.
-- **Structural basis risk** — residual mismatch after controlling for
-  geography and timing, attributable to differences in vulnerability (e.g.
-  industrial vs residential exposure) not captured by the damage model.
-
-#### 5. Vulnerability sensitivity
-
-Compare the basis risk under `mdd_scale` 1 (original), 0.8 (RMSE) and 0.88
-(RMSLE). A single MDD factor scales every storm's loss alike, so the
-attachment and exhaustion from `calibrate_trigger()` do not change; only the
-size of losses against payouts does.
-
-#### 6. Convex indices
-
-A mean gust index is linear in the gust, while wind damage is steeply
-convex: under the Schwierz curve the loss at a cell grows much faster than
-the gust. A storm with very high gusts over part of a region can cause a
-large loss with only a moderate mean, and the effect is greatest in a large,
-varied region such as England and Wales. Indices that give the highest
-gusts more weight could follow losses more closely. Candidates are:
-
-- **Gust cubed** — the exposure-weighted mean of $v_i^3$, with the cube
-  root taken so that the index stays in m s⁻¹.
-- **Excess gust** — following Klawa and Ulbrich (2003), the cubed excess of
-  the gust over the local 98th percentile, $(v_i / V98_i - 1)^3$, summed
-  over the cells where $v_i > V98_i$ and weighted by population or
-  exposure. Measuring the gust against the local climate allows for
-  buildings being built for the winds usual where they stand.
-- **Storm Severity Index** (Leckebusch et al., 2008):
-
-$$\text{SSI} = \sum_i \left(\frac{v_i}{V98_i} - 1\right)^3 w_i$$
-
-where the sum is over grid cells where $v_i > V98_i$, $V98_i$ is the
-98th percentile of the local gust distribution over a reference
-climatological period (1991–2020) and $w_i$ is a cell weight.
-
-The last two need a V98 surface. It has been computed from ERA5 daily
-maximum gusts for 1991–2020 but is not yet part of the package.
-
-#### 7. Frequency–severity model and EP curves
-
-A complete probabilistic view of the trigger requires modelling storm frequency
-and severity separately. Storm frequency (annual event count above a minimum
-gust threshold) would be fitted with a negative binomial distribution to
-accommodate over-dispersion relative to a Poisson process. Storm severity
-(modelled loss conditional on occurrence) would be fitted with a Generalised
-Pareto Distribution to the exceedances above a threshold chosen by mean excess
-plot inspection. Together these permit Monte Carlo simulation of an extended
-event set from which occurrence and aggregate exceedance probability curves can
-be derived for both indemnity losses and parametric payouts.
-
-### References
-
-Aznar-Siguan, G. and Bresch, D. N. (2019). CLIMADA v1: a global weather and
-climate risk assessment platform. *Geoscientific Model Development*, 12(7),
-3085–3097. <https://doi.org/10.5194/gmd-12-3085-2019>
-
-Copernicus Climate Change Service (2025). *Windstorm tracks and footprints
-derived from reanalysis over Europe between 1940 to present*. Copernicus
-Climate Change Service (C3S) Climate Data Store.
-<https://doi.org/10.24381/bf1f06a9>
-
-Eberenz, S., Stocker, D., Röösli, T. and Bresch, D. N. (2020). Asset
-exposure data for global physical risk assessment. *Earth System Science
-Data*, 12(2), 817–833. <https://doi.org/10.5194/essd-12-817-2020>
-
-Hersbach, H., Bell, B., Berrisford, P. et al. (2020). The ERA5 global
-reanalysis. *Quarterly Journal of the Royal Meteorological Society*, 146(730),
-1999–2049. <https://doi.org/10.1002/qj.3803>
-
-Hodges, K. I. (1995). Feature tracking on the unit sphere. *Monthly Weather
-Review*, 123(12), 3458–3465.
-[doi:10.1175/1520-0493(1995)123<3458:FTOTUS>2.0.CO;2](https://doi.org/10.1175/1520-0493(1995)123%3C3458:FTOTUS%3E2.0.CO;2)
-
-Hodges, K. I. (1999). Adaptive constraints for feature tracking. *Monthly
-Weather Review*, 127(6), 1362–1373.
-[doi:10.1175/1520-0493(1999)127<1362:ACFFT>2.0.CO;2](https://doi.org/10.1175/1520-0493(1999)127%3C1362:ACFFT%3E2.0.CO;2)
-
-Klawa, M. and Ulbrich, U. (2003). A model for the estimation of storm losses
-and the identification of severe winter storms in Germany. *Natural Hazards
-and Earth System Sciences*, 3(6), 725–732.
-<https://doi.org/10.5194/nhess-3-725-2003>
-
-Leckebusch, G. C., Renggli, D. and Ulbrich, U. (2008). Development and
-application of an objective storm severity measure for the Northeast Atlantic
-region. *Meteorologische Zeitschrift*, 17(5), 575–587.
-<https://doi.org/10.1127/0941-2948/2008/0323>
-
-Mishra, A. N., Messori, G., Riedel, L., Satheesh, A. R. and Pinto, J. G.
-(2026). Improving Europe-wide windstorm damage modeling using insurance loss
-data. *EGUsphere* [preprint].
-<https://doi.org/10.5194/egusphere-2026-3099>
-
-Schwierz, C., Köllner-Heck, P., Zenklusen Mutter, E., Bresch, D. N.,
-Vidale, P.-L., Wild, M. and Schär, C. (2010). Modelling European winter wind
-storm losses in current and future climate. *Climatic Change*, 101(3–4),
-485–514. <https://doi.org/10.1007/s10584-009-9712-1>
+Claude Code (Anthropic) assisted with the code, tests and analysis scripts.
+The author specified the method, directed the work and reviewed the
+results; the git history carries `Co-Authored-By` trailers.

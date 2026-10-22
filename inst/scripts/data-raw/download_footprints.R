@@ -7,8 +7,8 @@
 # download_tracks.R. Requires a CDS key in the keyring (ecmwfr::wf_set_key).
 #
 # Existing zips are skipped, so the script can be re-run after an
-# interruption. Each download goes to a .part file that is renamed only when
-# complete. A month that fails or times out is reported and skipped; re-run
+# interruption. Each download is requested as a .part file and renamed to
+# its zip only when complete. A month that fails or times out is reported and skipped; re-run
 # the script to try it again. Ends with a count of the months downloaded,
 # already present, failed and timed out.
 
@@ -34,22 +34,25 @@ request <- function(k, days, target) list(
 )
 
 # Download one year-month: "downloaded", "failed" or "timed out".
+# wf_request() returns the path it wrote to, or the request itself if it
+# timed out. ecmwfr 2 replaces the target's extension with the downloaded
+# file's type (".part" becomes ".zip", giving "...zip.zip"), so the file is
+# renamed from that path.
 download_month <- function(k, days, dir) {
     target <- file.path(dir, zip_name(k))
     part <- paste0(target, ".part")
-    ok <- tryCatch({
-        wf_request(request(k, days, basename(part)), path = dir)
-        TRUE
-    }, error = function(e) {
-        message("request for ", k, " failed: ", conditionMessage(e))
-        FALSE
-    })
-    if (ok && file.exists(part)) {
-        file.rename(part, target)
+    got <- tryCatch(wf_request(request(k, days, basename(part)), path = dir),
+                    error = function(e) {
+                        message("request for ", k, " failed: ",
+                                conditionMessage(e))
+                        NULL
+                    })
+    if (length(got) == 1 && is.character(got) && file.exists(got)) {
+        file.rename(got, target)
         "downloaded"
     } else {
-        unlink(part)
-        if (ok) "timed out" else "failed"
+        unlink(c(part, if (is.character(got)) got))
+        if (is.null(got)) "failed" else "timed out"
     }
 }
 

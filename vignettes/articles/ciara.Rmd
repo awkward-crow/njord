@@ -61,7 +61,7 @@ The payout is a linear ramp: nothing below the attachment $A$, the full
 limit $L$ above the exhaustion $E$, and a straight line between them,
 $P(I) = L \min(1, \max(0, (I - A)/(E - A)))$.
 
-```{r ramp, fig.cap = "Linear ramp payout against the exposure-weighted UK mean gust index. The attachment (22 m/s) and exhaustion (28 m/s) are illustrative; calibrating them to storm losses with `calibrate_trigger()` is still to be done. Storm Ciara's index is the dashed line."}
+```{r ramp, fig.cap = "Linear ramp payout against the exposure-weighted UK mean gust index. The attachment (22 m/s) and exhaustion (28 m/s) are illustrative; calibrating them to storm losses with `min_index_calibration()` is still to be done. Storm Ciara's index is the dashed line."}
 attachment <- 22
 exhaustion <- 28
 ramp <- data.frame(index = seq(15, 35, by = 0.1))

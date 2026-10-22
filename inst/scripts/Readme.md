@@ -8,10 +8,16 @@ where their output goes:
   the UK regions on the footprint grid. All its output goes to `data-raw/`,
   which git ignores.
 - [`extdata/`](extdata/Readme.md) writes the files in `inst/extdata/` that
-  the package's articles and demos read, so that they run without
+  the package's vignette, articles and demos read, so that they run without
   `data-raw/`: small extracts of the hazard and exposure data, and a summary
   of each storm's footprint over the UK. Its scripts read their inputs from
   `data-raw/`.
+
+One script sits in this folder itself: `holdout_fitted_ramp.R` writes
+`inst/extdata/holdout_fitted_ramp.csv` and `insample_fitted_ramp.csv`, the
+hold-out results and in-sample fits of the fitted ramp that the vignette
+(`vignettes/njord-method.Rmd`) reads rather than computing them itself. It
+reads only `inst/extdata/` and takes several minutes.
 
 The demonstrations of the package functions, such as Storm Ciara from
 footprint to loss, are in [`inst/demos/`](../demos/Readme.md).

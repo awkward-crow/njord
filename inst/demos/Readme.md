@@ -1,9 +1,8 @@
 # Demos
 
-These scripts demonstrate the package functions. They write nothing; each
-prints a short report with `message()`, so it goes to stderr, and
-`calibration_demo.R` also prints a table to stdout. Run in an interactive
-session, each also draws a plot. They load the
+These two scripts demonstrate the package functions. Each prints a short
+report with `message()`, so it goes to stderr; neither writes a file.
+Run in an interactive session, each also draws a plot. They load the
 package with `devtools::load_all()`, so they run without njord being
 installed.
 
@@ -50,102 +49,73 @@ bn.
 
 ## calibration_demo.R
 
-Calibrates parametric triggers to modelled losses over the storm catalogue
-and shows their basis risk: first one cover for the whole UK, then two
-covers, one for England and Wales and one for Scotland, whose payouts are
-added.
+Calibrates a parametric cover for Scotland with
+`frequency_matching_calibration()` and measures its basis risk over the
+storm catalogue, in sample. The comparison with the other two rules, the
+England and Wales, combined and UK covers, the out-of-sample test and the
+limits of the method are in the vignette,
+[`docs/njord-method.md`](../../docs/njord-method.md)
+(source `vignettes/njord-method.Rmd`).
 
-Each trigger index is the exposure-weighted mean gust over its region: the
-footprint gust averaged over the cells with assets there, each weighted by
-the value of its LitPop assets (`exposure_weights()`,
-`weighted_mean_index()`). A storm with no gust values in a region has index
-0 there. Losses are under the Schwierz curve with `mdd_scale = 0.8`, as in
-`ciara_demo.R`, as fractions of the total UK assets, so the covers' amounts
-can be added; the report gives them in USD bn.
+The index is the exposure-weighted mean gust over Scotland: the footprint
+gust averaged over the cells with assets there, each weighted by the value
+of its LitPop assets (`exposure_weights()`). The event set is the
+package's current definition: the storms of 1940–2025 with a UK maximum
+gust above 25 m/s, less those that share their maximum gust with a storm
+less than 72 hours away (`shared_max_within_72h()`): 1,323 storms, 15.38 a
+year. Losses are under the Schwierz curve with `mdd_scale = 0.8`, as in
+`ciara_demo.R`.
 
-The event set is the storms of 1940–2025 with a UK maximum gust above
-25 m/s, less those that share their maximum gust with a storm less than
-72 hours away (`shared_max_within_72h()`): 1,323 storms, 15.38 a year. The
-same storms are used for every cover.
-
-Each cover is a layer on its own region's losses: it should pay the loss
-above the 1-in-5 year loss (the retention), up to the 1-in-20 year loss, so
-its limit is the difference. `calibrate_trigger()` sets the attachment and
-exhaustion at the index levels of those two losses: each is the lowest
-index among the storms with a loss above the level. The payout is a straight
-line from nothing at the attachment to the limit at the exhaustion
-(`payout()`), and the basis risk of a storm is its payout minus what the
-layer would pay (`basis_risk()`). The return periods are `attach_rp` and
-`exhaust_rp` at the top of the script.
-
-It reads `uk_storm_values.csv`, the three `*_exposure_gust.csv` and three
-`*_storm_losses.csv` files, `uk_nuts1_cover.tif` and `uk_litpop_025deg.tif`
-from `inst/extdata/`, so it runs from a checkout without `data-raw/` or a
-CDS account. If any are missing it names them and does nothing else. It
-takes about 3 seconds.
+The cover is a layer on Scotland's losses: it should pay the loss above the
+1-in-5 year loss (the retention), up to the 1-in-20 year loss, so its limit
+is the difference; what it should pay a storm is the storm's recovery. The
+payout is a straight line from nothing at the attachment to the limit at
+the exhaustion (`payout()`). Frequency matching sets the attachment so that
+as many storms trigger a payout as have a recovery, and the exhaustion so
+that as many receive the full limit as have a loss above the 1-in-20 year
+loss. The basis risk is measured against the modelled loss, which is built
+from the same ERA5 gust field as the index, so errors in that field are not
+part of it.
 
 It gives:
 
 ```
-1323 storms, 15.38 a year.
-UK: attachment 25.81 m/s, exhaustion 31.08 m/s; layer USD 0.243 bn xs USD 0.203 bn.
-  120 storms pay out, 18 would recover; 1 of those pay nothing, 103 with no recovery pay something. Paid a year: trigger USD 0.114 bn, layer USD 0.028 bn; correlation 0.52.
-England and Wales: attachment 26.63 m/s, exhaustion 30.82 m/s; layer USD 0.241 bn xs USD 0.183 bn.
-  65 storms pay out, 18 would recover; 1 of those pay nothing, 48 with no recovery pay something. Paid a year: trigger USD 0.081 bn, layer USD 0.026 bn; correlation 0.636.
-Scotland: attachment 32.37 m/s, exhaustion 34.8 m/s; layer USD 0.073 bn xs USD 0.054 bn.
-  22 storms pay out, 18 would recover; 1 of those pay nothing, 5 with no recovery pay something. Paid a year: trigger USD 0.011 bn, layer USD 0.01 bn; correlation 0.972.
-England and Wales plus Scotland: 82 storms pay out, 35 would recover; 2 of those pay nothing, 49 with no recovery pay something. Paid a year: trigger USD 0.092 bn, layer USD 0.036 bn; correlation 0.663.
+Basis risk here is measured against a modelled loss from the same ERA5 gust field as the index, not against real losses.
+Scotland cover, frequency_matching_calibration(), on 1323 storms of 1940-2025 (15.38 a year); amounts in USD.
+Layer:        USD 73.1 m xs USD 53.8 m (the 1-in-5 to 1-in-20 year Scottish loss)
+Attachment:   32.62 m/s, set by track 1642 (Jan 2015)
+Exhaustion:   35.05 m/s, set by track 1266 (Dec 1998)
+Storms paid / storms recovering:      18 / 18
+False payments (paid, no recovery):   2
+Missed storms (recovery, not paid):   2
+RMS basis risk:                       USD 1.2 m a storm
+RMS against a flat payout:            0.20
+Paid / layer:                         1.03
+Correlation of payout with recovery:  0.98
+(A flat payout pays every storm the mean recovery.)
+
+The 5 storms with the largest Scottish loss, in USD m:
+ track     date index  loss recovery payout
+  1346 Jan 2002 38.98 394.5     73.1   73.1
+  1618 Dec 2013 36.23 174.9     73.1   73.1
+  1266 Dec 1998 35.05 163.1     73.1   73.1
+  1045 Feb 1989 35.31 151.5     73.1   73.1
+  1578 Dec 2011 34.80 127.4     73.1   65.5
+Track 1346 (January 2002): its modelled Scottish loss is not supported by observed gusts.
 ```
 
-and then the ten storms with the largest UK loss: their three indices, the
-UK cover's payout and layer recovery, the same for the two regional covers
-added, and the storm's loss, in USD bn:
+The RMS against a flat payout is the RMS basis risk over that of a cover
+paying every storm the mean recovery, so below 1 the index helps.
 
-```
-   event uk_index ew_index sco_index uk_payout uk_layer regional_payout
-1   1070     33.2     34.3      21.8     0.243    0.243           0.241
-2    926     31.1     30.8      33.8     0.243    0.243           0.284
-3   1079     32.9     33.4      27.2     0.243    0.243           0.241
-4   1470     31.6     32.0      28.0     0.243    0.243           0.241
-5   1758     31.9     32.2      29.7     0.243    0.243           0.241
-6   1346     25.8     24.8      39.0     0.000    0.210           0.073
-7   1014     26.2     26.6      21.8     0.016    0.159           0.000
-8   1804     31.0     31.3      28.8     0.239    0.157           0.241
-9   1224     28.2     28.6      24.3     0.112    0.098           0.114
-10  1239     27.5     27.8      23.1     0.076    0.093           0.066
-   regional_layer storm_loss
-1           0.241      1.340
-2           0.256      0.990
-3           0.241      0.888
-4           0.241      0.528
-5           0.241      0.460
-6           0.073      0.413
-7           0.180      0.362
-8           0.160      0.361
-9           0.118      0.302
-10          0.112      0.297
-```
-
-The largest storms are paid in full. Most of the basis risk is the other
-way: storms whose index passes the attachment but whose loss stays below
-the retention, so the trigger pays about four times what the UK layer
-would. Splitting the UK into two covers halves the number of such storms.
-Track 1346, which hit Scotland hardest, gets nothing from the UK cover but
-the full Scotland limit from the regional covers.
-
-The storm a cover misses is the one that sets its attachment, because its
-index equals the attachment and the payout there is nothing: track 1346 for
-the UK cover, track 1014 (the Great Storm of October 1987) for England and
-Wales and track 344 for Scotland. The two regional layers together are also
-a bigger cover than the UK layer: their limits add up to 0.314 USD bn
-against 0.243, and they would pay 0.036 USD bn a year against 0.028. So the
-two sets of figures compare covers of different size.
-
-In an interactive session it also plots, one panel for each of the three
-covers, the payout ramp as a line and each storm's layer loss as a point,
-against the cover's index, in USD bn. A storm on the line is paid exactly
-what the layer would pay; the vertical gap is its basis risk. Storms with an
-index below `plot_min_index` (25 m/s), set at the top of the script, are
-left out, as nearly all have no layer loss. The panels share the index axis
-but each has its own loss axis. The two regional covers added together have
-no single index, so they are not plotted.
+In an interactive session it also draws the plot behind the figure in the
+main README: for
+each storm with an index of at least 25 m/s, the layer's recovery (circle)
+and the cover's payout (dot, on the ramp) against the storm's index, joined
+where they differ, with the attachment and exhaustion marked, the largest
+storms labelled and the January 2002 storm (track 1346) set apart in red, as
+its modelled loss is not supported by observed gusts.
+It reads `uk_storm_values.csv`, `sco_exposure_gust.csv`,
+`sco_storm_losses.csv`, `uk_nuts1_cover.tif` and `uk_litpop_025deg.tif`
+from `inst/extdata/`, so it runs from a checkout without `data-raw/` or a
+CDS account. If any are missing it names them and does nothing else. It
+takes a few seconds and uses base graphics only.
