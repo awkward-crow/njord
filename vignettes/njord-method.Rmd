@@ -465,7 +465,7 @@ recovery (points) against the cover's index, for storms with an index of
 at least `plot_min_index`. A storm on the line is paid exactly what the
 layer would pay; the vertical gap is its basis risk.
 
-```{r r1-figure, fig.width = 7, fig.height = 7, out.width = "100%"}
+```{r r1-figure, fig.width = 7, fig.height = 6, dpi = 96, fig.retina = 2, out.width = "70%"}
 plot_covers <- c(uk = "UK", ew = "England and Wales", sco = "Scotland")
 by_cover <- function(f)
   do.call(rbind, lapply(names(plot_covers), function(k)

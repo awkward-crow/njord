@@ -418,7 +418,7 @@ ggplot2::ggplot() +
   ggplot2::theme_minimal()
 ```
 
-<img src="figures/r1-figure-1.png" alt="" width="100%" />
+<img src="figures/r1-figure-1.png" alt="" width="70%" />
 
 ## Out-of-sample test
 
