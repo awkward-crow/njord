@@ -17,10 +17,12 @@ payout minus the recovery.
 
 <figure>
 <img src="man/figures/scotland-cover.png"
-alt="Scotland cover, 1940-2025: payout (on the ramp) and layer recovery by storm against its index. January 2002 (red) has a modelled loss not supported by observed gusts." />
-<figcaption aria-hidden="true">Scotland cover, 1940-2025: payout (on the
-ramp) and layer recovery by storm against its index. January 2002 (red)
-has a modelled loss not supported by observed gusts.</figcaption>
+alt="The frequency-matched Scotland cover, 1940-2025: for each storm with an index of at least 25 m/s, the cover’s payout (dots, on the ramp) and the layer’s recovery (circles) against the storm’s wind index. The storm of January 2002 (red) has a modelled loss not supported by observed gusts." />
+<figcaption aria-hidden="true">The frequency-matched Scotland cover,
+1940-2025: for each storm with an index of at least 25 m/s, the cover’s
+payout (dots, on the ramp) and the layer’s recovery (circles) against
+the storm’s wind index. The storm of January 2002 (red) has a modelled
+loss not supported by observed gusts.</figcaption>
 </figure>
 
 ## How it works
