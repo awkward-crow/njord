@@ -2,7 +2,7 @@
 % Please edit documentation in R/trigger.R
 \name{min_index_calibration}
 \alias{min_index_calibration}
-\title{Calibrate the trigger to loss return periods}
+\title{Calibrate the trigger at the weakest wind the layer pays on}
 \usage{
 min_index_calibration(
   index_vec,
@@ -28,9 +28,14 @@ insured value, matched to \code{index_vec} by name.}
 A list: \code{attachment}, \code{exhaustion}, \code{attach_rp}, \code{exhaust_rp}.
 }
 \description{
-Sets the attachment to the lowest index among the storms whose loss
-exceeds the loss with return period \code{attach_rp}, and the exhaustion
-likewise for \code{exhaust_rp}. The trigger is tied to loss exceedances, not to
+Sets the attachment at the weakest wind among the storms the layer pays
+on, so the cover reaches all of them apart from the storm that sets the
+attachment, which receives a payout of zero; it also pays on many weaker
+storms the layer does not pay on. The layer pays on the storms whose loss
+exceeds the retention, the loss with return period \code{attach_rp}, so the
+attachment is the lowest index among them. The exhaustion is likewise the
+lowest index among the storms whose loss exceeds the loss with return
+period \code{exhaust_rp}. The trigger is tied to loss exceedances, not to
 quantiles of the index. With \code{events_per_year} storms a year, the loss with
 return period \code{rp} years is the \code{1 - 1 / (rp * events_per_year)} quantile
 of the storm losses.

@@ -1,8 +1,10 @@
 #' Folds of consecutive storm seasons
 #'
 #' Splits the storm seasons of a catalogue into blocks of `block`
-#' consecutive seasons, for [holdout_calibration()]. A season runs from July
-#' to June and is named by the year it starts in. The catalogue covers the
+#' consecutive seasons, for the out-of-sample test of
+#' [holdout_calibration()]. A season runs from July to June and is named by
+#' the year it starts in. For 1940 to 2025 there are 87 seasons, 1939/40 to
+#' 2025/26, in 17 blocks of five, the last holding seven. The catalogue covers the
 #' calendar years `first_year` to `last_year`, so its first season (starting
 #' in July of `first_year - 1`) and its last (starting in July of
 #' `last_year`) lie only half inside it and count as half a year each; every
@@ -34,8 +36,10 @@ storm_season <- function(time) {
 
 #' Hold-out scoring of a calibration method
 #'
-#' Calibrates a trigger on all but one fold of storm seasons and scores it on
-#' the storms of the fold left out, for each fold in turn. Each storm falls
+#' The out-of-sample test: each block of storm seasons (a fold) is scored
+#' with a cover calibrated on the other blocks. It calibrates a trigger on all
+#' but one fold and scores it on the storms of the fold left out, for each
+#' fold in turn; [holdout_summary()] pools the results. Each storm falls
 #' in the season of its central time and so in one fold of `scheme`. For each
 #' fold, the training storms are those of the other folds and the training
 #' years the catalogue's years less the fold's, so the training storms a year
@@ -45,8 +49,9 @@ storm_season <- function(time) {
 #' period `exhaust_rp` less the retention. `method` is then called on the
 #' training storms with those storms a year, and the held-out storms are
 #' scored with the training attachment, exhaustion, retention and limit: the
-#' payout is that of [payout()] and the recovery is the loss above the
-#' retention, between 0 and the limit, as in [basis_risk()].
+#' payout is that of [payout()] and the recovery is what the layer would
+#' have paid on the storm: its loss above the retention, capped at the
+#' limit.
 #'
 #' A fold fails if `method` stops or warns, if it returns an attachment or
 #' exhaustion that is not finite, or if the attachment is not below the
@@ -176,12 +181,15 @@ combine_holdout <- function(results, region = "combined") {
 #' The statistics are: `events`, the held-out storms; `recovering`, those
 #' with a recovery; `paid`, those with a payout; `false_payments`, those
 #' paid with no recovery; `misses`, those with a recovery paid nothing;
-#' `rms_basis_risk`, the root mean square of payout less recovery;
+#' `rms_basis_risk`, the typical basis risk (root-mean-square of payout
+#' minus recovery);
 #' `paid_to_recovery`, total payout over total recovery; `correlation`, of
 #' payout with recovery; `annual_payout` and `annual_recovery`, the totals
-#' over the catalogue's years; `rms_to_baseline`, the RMS basis risk over
-#' that of a cover with no index, which pays every held-out storm its
-#' fold's training mean recovery; `failed_folds` and `failed_events`.
+#' over the catalogue's years; `rms_to_baseline`, the typical basis risk as
+#' a fraction of the reference cover's: the reference cover ignores the wind
+#' and pays every storm the same amount, the average recovery of the seasons
+#' used for calibration (each held-out storm its fold's training mean
+#' recovery); `failed_folds` and `failed_events`.
 #'
 #' The same RMS statistics are also given over the fitted folds only,
 #' leaving out the storms of failed folds: `fitted_folds`,

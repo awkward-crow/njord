@@ -13,11 +13,16 @@ payout <- function(index, attachment, exhaustion, limit) {
   limit * pmin(1, pmax(0, (index - attachment) / (exhaustion - attachment)))
 }
 
-#' Calibrate the trigger to loss return periods
+#' Calibrate the trigger at the weakest wind the layer pays on
 #'
-#' Sets the attachment to the lowest index among the storms whose loss
-#' exceeds the loss with return period `attach_rp`, and the exhaustion
-#' likewise for `exhaust_rp`. The trigger is tied to loss exceedances, not to
+#' Sets the attachment at the weakest wind among the storms the layer pays
+#' on, so the cover reaches all of them apart from the storm that sets the
+#' attachment, which receives a payout of zero; it also pays on many weaker
+#' storms the layer does not pay on. The layer pays on the storms whose loss
+#' exceeds the retention, the loss with return period `attach_rp`, so the
+#' attachment is the lowest index among them. The exhaustion is likewise the
+#' lowest index among the storms whose loss exceeds the loss with return
+#' period `exhaust_rp`. The trigger is tied to loss exceedances, not to
 #' quantiles of the index. With `events_per_year` storms a year, the loss with
 #' return period `rp` years is the `1 - 1 / (rp * events_per_year)` quantile
 #' of the storm losses.
@@ -47,15 +52,19 @@ loss_level <- function(loss, rp, events_per_year)
 
 #' Calibrate the trigger by matching frequencies
 #'
-#' Sets the attachment so that as many storms trigger a payout as have a
-#' loss above the loss with return period `attach_rp`, and the exhaustion so
-#' that as many storms receive the full limit as have a loss above the loss
-#' with return period `exhaust_rp`. With `k` storms whose loss is strictly
-#' above the first loss and `m` strictly above the second, the attachment is
-#' the (k+1)-th largest index, so the `k` storms with the largest index lie
-#' above it, and the exhaustion is the m-th largest, so the `m` storms with
-#' the largest index lie at or above it. The levels depend only on the order
-#' of the indices and of the losses, not on their values. The losses with
+#' Sets the attachment so that as many storms receive a payout as the layer
+#' pays on, and the exhaustion so that as many are paid in full as the layer
+#' pays its limit on, counting down from the storm with the highest index. It
+#' uses only the ranking of the storms, so any increasing transformation of
+#' the index gives the same cover. The result is the frequency-matched cover.
+#'
+#' The layer pays on the storms whose loss is above the retention, the loss
+#' with return period `attach_rp`, and pays its limit on those whose loss is
+#' above the loss with return period `exhaust_rp`. With `k` storms whose loss
+#' is strictly above the first loss and `m` strictly above the second, the
+#' attachment is the (k+1)-th largest index, so the `k` storms with the
+#' largest index lie above it, and the exhaustion is the m-th largest, so the
+#' `m` storms with the largest index lie at or above it. The losses with
 #' return period `rp` are as in [min_index_calibration()].
 #'
 #' Indices are ranked with ties counted separately (the k-th and (k+1)-th
@@ -99,13 +108,13 @@ frequency_matching_calibration <- function(index_vec, loss_vec,
 
 #' Calibrate the trigger by fitting the ramp
 #'
-#' Chooses the attachment and exhaustion that make the ramp's payout closest
-#' to what the layer would recover, over all storms. The layer is that of
-#' [min_index_calibration()]: the loss above the loss with return period
-#' `attach_rp` (the retention), up to the loss with return period
-#' `exhaust_rp`, so the limit is the difference. A storm's recovery is its
-#' loss less the retention, between 0 and the limit, and its basis risk is
-#' the payout of [payout()] with that limit minus the recovery. The
+#' Chooses the attachment and exhaustion that bring the cover's payouts as
+#' close as possible to the layer's recoveries over all storms. The layer
+#' pays the loss above the retention, the loss with return period
+#' `attach_rp`, up to the loss with return period `exhaust_rp`, so the limit
+#' is the difference. A storm's recovery is what the layer would have paid
+#' on it: its loss above the retention, capped at the limit. Its basis risk
+#' is the payout of [payout()] with that limit minus the recovery. The
 #' attachment and exhaustion minimise the sum over all storms of the squared
 #' basis risk (`loss = "squared"`) or of its absolute value
 #' (`loss = "absolute"`).
@@ -176,15 +185,19 @@ fitted_ramp_calibration <- function(index_vec, loss_vec, attach_rp = 5,
 
 #' Basis risk per storm
 #'
-#' The payout of the linear ramp against the modelled loss, storm by storm.
-#' Losses are matched to `index_vec` by name. The limit is in the units of
-#' the losses, a fraction of the total insured value.
+#' The payout of the linear ramp against `loss_vec`, storm by storm. A
+#' cover's basis risk on a storm is its payout minus the recovery, what the
+#' layer would have paid on the storm: its modelled loss above the retention,
+#' capped at the limit. Pass the recoveries as `loss_vec` to get it; the
+#' function does not apply the retention itself. Losses are matched to
+#' `index_vec` by name. The limit is in the units of the losses, a fraction
+#' of the total insured value.
 #'
 #' @inheritParams min_index_calibration
 #' @inheritParams payout
 #' @return A data frame with one row per storm: `event` (the names of
 #'   `index_vec`), `index`, `loss`, `payout`, and `basis_risk`, payout minus
-#'   loss (positive when the payout exceeds the loss).
+#'   loss (positive is an overpayment).
 #' @export
 basis_risk <- function(index_vec, loss_vec, attachment, exhaustion,
                        limit = 1) {

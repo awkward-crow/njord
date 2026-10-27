@@ -47,8 +47,10 @@ then the storm's \code{payout} and \code{recovery}. Last comes \code{failure}: \
 or the reason the fold failed.
 }
 \description{
-Calibrates a trigger on all but one fold of storm seasons and scores it on
-the storms of the fold left out, for each fold in turn. Each storm falls
+The out-of-sample test: each block of storm seasons (a fold) is scored
+with a cover calibrated on the other blocks. It calibrates a trigger on all
+but one fold and scores it on the storms of the fold left out, for each
+fold in turn; \code{\link[=holdout_summary]{holdout_summary()}} pools the results. Each storm falls
 in the season of its central time and so in one fold of \code{scheme}. For each
 fold, the training storms are those of the other folds and the training
 years the catalogue's years less the fold's, so the training storms a year
@@ -58,8 +60,9 @@ loss with return period \code{attach_rp} and the limit the loss with return
 period \code{exhaust_rp} less the retention. \code{method} is then called on the
 training storms with those storms a year, and the held-out storms are
 scored with the training attachment, exhaustion, retention and limit: the
-payout is that of \code{\link[=payout]{payout()}} and the recovery is the loss above the
-retention, between 0 and the limit, as in \code{\link[=basis_risk]{basis_risk()}}.
+payout is that of \code{\link[=payout]{payout()}} and the recovery is what the layer would
+have paid on the storm: its loss above the retention, capped at the
+limit.
 }
 \details{
 A fold fails if \code{method} stops or warns, if it returns an attachment or

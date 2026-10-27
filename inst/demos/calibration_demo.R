@@ -12,14 +12,18 @@
 # under the Schwierz curve with the MDD scaled by mdd_scale (0.8, as in
 # ciara_demo.R).
 #
-# The cover is a layer on Scotland's losses: it should pay the loss above
-# the 1-in-attach_rp year loss (the retention) up to the 1-in-exhaust_rp
-# year loss, so its limit is the difference; what it should pay a storm is
-# the storm's recovery. It prints the layer, the attachment and exhaustion
-# and the storms that set them, storms paid against storms recovering,
-# false payments, missed storms, RMS basis risk, RMS against a flat payout
-# of the mean recovery, paid over the layer's recoveries, the correlation of
-# payout with recovery and the storms with the largest losses.
+# The cover is compared with a layer on Scotland's losses, which pays the
+# loss above the retention (the loss exceeded about once in attach_rp
+# years) up to the loss exceeded about once in exhaust_rp years, so its
+# limit is the difference. A storm's recovery is what the layer would have
+# paid on it, and the cover's basis risk is its payout minus the recovery.
+# It prints the layer, the attachment and exhaustion and the storms that set
+# them, storms paid against storms recovering, false payments, missed
+# storms, the typical basis risk (root-mean-square of payout minus
+# recovery), that as a fraction of the reference cover's (the reference
+# cover ignores the wind and pays every storm the mean recovery), paid over
+# the layer's recoveries, the correlation of payout with recovery and the
+# storms with the largest losses.
 #
 # It plots each storm's recovery and payout against its index, with the
 # payout ramp; the January 2002 storm (track 1346) is marked, as its
@@ -148,7 +152,8 @@ if (any(files == "")) {
   message(
     "Basis risk here is measured against a modelled loss from the same ",
     "ERA5 gust field as the index, not against real losses.\n",
-    "Scotland cover, frequency_matching_calibration(), on ", nrow(events),
+    "Frequency-matched Scotland cover (frequency_matching_calibration()), ",
+    "on ", nrow(events),
     " storms of ", first_year, "-", last_year, " (", fmt(events_per_year),
     " a year); amounts in USD.\n",
     "Layer:        USD ", fmt(usd_m(limit), 1), " m xs USD ",
@@ -162,13 +167,14 @@ if (any(files == "")) {
     "\n",
     "False payments (paid, no recovery):   ", sum(p > 0 & r == 0), "\n",
     "Missed storms (recovery, not paid):   ", sum(r > 0 & p == 0), "\n",
-    "RMS basis risk:                       USD ",
+    "Typical basis risk (RMS):             USD ",
     fmt(usd_m(sqrt(mean((p - r)^2))), 1), " m a storm\n",
-    "RMS against a flat payout:            ",
+    "Typical basis risk / reference cover: ",
     fmt(sqrt(sum((p - r)^2) / sum((mean(r) - r)^2))), "\n",
     "Paid / layer:                         ", fmt(sum(p) / sum(r)), "\n",
     "Correlation of payout with recovery:  ", fmt(cor(p, r)), "\n",
-    "(A flat payout pays every storm the mean recovery.)")
+    "(The reference cover ignores the wind and pays every storm the mean ",
+    "recovery.)")
 
   largest <- order(-loss)[seq_len(n_largest)]
   message("\nThe ", n_largest, " storms with the largest Scottish loss, in USD m:")

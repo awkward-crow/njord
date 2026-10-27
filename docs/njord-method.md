@@ -119,21 +119,31 @@ L \cdot \dfrac{I - A}{E - A} & A \le I \le E \\
 L & I > E
 \end{cases}$$
 
-where $A$ is the attachment (trigger) level, $E$ is the exhaustion level
-and $L$ is the policy limit. Each cover is designed to pay a **layer**
-of its region’s losses: the loss above the 1-in-5 year loss (the
-retention), up to the 1-in-20 year loss, so the limit $L$ is the
-difference between the two. The return periods are illustrative and
-would be negotiated in a real transaction. Three rules set $A$ and $E$:
+where $A$ is the *attachment*, the index at which the cover starts
+paying, $E$ is the *exhaustion*, the index at which it pays in full, and
+$L$ is the limit. Each cover is compared with an ordinary insurance
+**layer** on its region’s losses, which pays the part of a storm’s loss
+above the *retention* (the loss exceeded about once in five years), up
+to the *limit* (up to the loss exceeded about once in twenty), so the
+limit $L$ is the difference between the two. The return periods are
+illustrative and would be negotiated in a real transaction. Three rules
+set $A$ and $E$:
 
-- **R1**, `min_index_calibration()`: each level is the lowest index
-  among the storms whose loss exceeds the retention or the 1-in-20 year
-  loss.
-- **R2**, `frequency_matching_calibration()`: as many storms trigger a
-  payout as have a recovery, and as many receive the full limit as have
-  a loss above the 1-in-20 year loss.
-- **R3**, `fitted_ramp_calibration()`: the levels that minimise the sum
-  over all storms of the squared basis risk, or of its absolute value.
+- **R1**, `min_index_calibration()`, sets the attachment at the weakest
+  wind among the storms the layer pays on, so the cover reaches all of
+  them apart from the storm that sets the attachment, which receives a
+  payout of zero, but it also pays on many weaker storms the layer does
+  not pay on. The exhaustion is set in the same way from the storms
+  whose loss is above the loss exceeded about once in twenty years.
+- **R2**, `frequency_matching_calibration()`, ranks the storms by wind
+  index and pays on as many of the windiest as the layer pays on (18 for
+  Scotland), and in full on as many as the layer pays its limit on, so
+  the cover pays about as often as the layer would. This is the
+  *frequency-matched cover*.
+- **R3**, `fitted_ramp_calibration()`, chooses the levels that bring the
+  cover’s payouts as close as possible to the layer’s recoveries over
+  all storms: they minimise the sum over all storms of the squared basis
+  risk, or of its absolute value.
 
 ## Basis risk
 
@@ -141,19 +151,20 @@ For each storm event $e$, the basis risk of a cover is defined as:
 
 $$B_e = P_e - R_e$$
 
-where $P_e$ is the parametric payout and $R_e$ is what the layer would
-recover: the storm’s modelled loss above the retention, capped at the
-limit (`basis_risk()`), both expressed as fractions of the total UK
-assets. Positive values indicate over-payment (the trigger pays more
-than the layer would); negative values indicate under-payment (the
-insured bears a loss the layer would have covered).
+where $P_e$ is the parametric payout and $R_e$ is the storm’s
+*recovery*, what the layer would have paid on it: its modelled loss
+above the retention, capped at the limit, both expressed as fractions of
+the total UK assets (`basis_risk()` takes the recoveries as its losses).
+Positive values are overpayments (the cover pays more than the layer
+would); negative values are underpayments (the insured bears a loss the
+layer would have covered).
 
 The distribution of $B_e$ across the historical event set characterises
 the basis risk of the trigger design. It has two sources: storms whose
 index passes the attachment but whose loss stays below the retention,
-which are paid when the layer would pay nothing, and storms whose loss
-reaches the layer but whose index stays low, which are paid too little
-or nothing.
+which are paid when the layer would pay nothing (*false payments*), and
+storms whose loss reaches the layer but whose index stays low, which are
+paid too little or nothing (a storm paid nothing is a *missed storm*).
 
 Over the event set (1,323 storms, 1940–2025, the same for every cover)
 the UK cover under R1 pays the largest storms in full, but 120 storms
@@ -267,7 +278,7 @@ loss_at <- function(loss, rp, events_per_year)
   unname(quantile(loss, 1 - 1 / (rp * events_per_year)))
 
 # Scores of a cover's payouts p against its recoveries r, storm by storm,
-# as in holdout_summary(): the no-index cover pays every storm the mean
+# as in holdout_summary(): the reference cover pays every storm the mean
 # recovery.
 score <- function(p, r, years)
   c(paid = sum(p > 0), recovering = sum(r > 0),
@@ -325,14 +336,18 @@ in_sample_scores <- lapply(in_sample, function(cv)
 ```
 
 In each table, *paid* is the storms paid against the storms with a
-recovery (above the retention), *false* the storms paid with no recovery
-and *missed* the storms with a recovery but paid nothing. *RMS / no
-index* is the RMS basis risk over that of a cover paying every storm the
-mean recovery. Amounts are in USD.
+recovery (above the retention), *false* the false payments (storms paid
+with no recovery) and *missed* the missed storms (storms with a recovery
+but paid nothing). *RMS USD m* is the typical basis risk
+(root-mean-square of payout minus recovery) per storm. *RMS / reference*
+is the typical basis risk as a fraction of that of the *reference
+cover*, which ignores the wind and pays every storm the same amount, the
+average recovery of the seasons used for calibration (here all of them);
+lower is better. Amounts are in USD.
 
 **Scotland, layer USD 0.073 bn xs USD 0.054 bn.**
 
-| rule | attach m/s | exhaust m/s | set by | paid | false | missed | RMS USD m | RMS / no index | paid / layer | correlation | USD m a year paid / recovered |
+| rule | attach m/s | exhaust m/s | set by | paid | false | missed | RMS USD m | RMS / reference | paid / layer | correlation | USD m a year paid / recovered |
 |:---|:---|:---|:---|---:|---:|---:|---:|---:|---:|---:|:---|
 | R1 minimum index | 32.37 | 34.80 | 344 / 1578 | 22 / 18 | 5 | 1 | 1.6 | 0.27 | 1.17 | 0.97 | 11.2 / 9.6 |
 | R2 frequency matching | 32.62 | 35.05 | 1642 / 1266 | 18 / 18 | 2 | 2 | 1.2 | 0.20 | 1.03 | 0.98 | 9.9 / 9.6 |
@@ -341,7 +356,7 @@ mean recovery. Amounts are in USD.
 
 **England and Wales, layer USD 0.241 bn xs USD 0.183 bn.**
 
-| rule | attach m/s | exhaust m/s | set by | paid | false | missed | RMS USD m | RMS / no index | paid / layer | correlation | USD m a year paid / recovered |
+| rule | attach m/s | exhaust m/s | set by | paid | false | missed | RMS USD m | RMS / reference | paid / layer | correlation | USD m a year paid / recovered |
 |:---|:---|:---|:---|---:|---:|---:|---:|---:|---:|---:|:---|
 | R1 minimum index | 26.63 | 30.82 | 1014 / 926 | 65 / 18 | 48 | 1 | 22.8 | 1.29 | 3.12 | 0.64 | 81.0 / 26.0 |
 | R2 frequency matching | 29.50 | 31.28 | 1097 / 1804 | 18 / 18 | 4 | 4 | 11.2 | 0.63 | 1.10 | 0.81 | 28.6 / 26.0 |
@@ -351,7 +366,7 @@ mean recovery. Amounts are in USD.
 **England and Wales plus Scotland, layers USD 0.314 bn xs USD 0.237 bn
 in all.**
 
-| rule | attach m/s | exhaust m/s | set by | paid | false | missed | RMS USD m | RMS / no index | paid / layer | correlation | USD m a year paid / recovered |
+| rule | attach m/s | exhaust m/s | set by | paid | false | missed | RMS USD m | RMS / reference | paid / layer | correlation | USD m a year paid / recovered |
 |:---|:---|:---|:---|---:|---:|---:|---:|---:|---:|---:|:---|
 | R1 minimum index | \- | \- |  | 82 / 35 | 49 | 2 | 23.0 | 1.23 | 2.59 | 0.66 | 92.3 / 35.6 |
 | R2 frequency matching | \- | \- |  | 34 / 35 | 5 | 6 | 11.2 | 0.60 | 1.08 | 0.83 | 38.5 / 35.6 |
@@ -361,7 +376,7 @@ in all.**
 **UK, layer USD 0.243 bn xs USD 0.203 bn (the national-trigger
 contrast).**
 
-| rule | attach m/s | exhaust m/s | set by | paid | false | missed | RMS USD m | RMS / no index | paid / layer | correlation | USD m a year paid / recovered |
+| rule | attach m/s | exhaust m/s | set by | paid | false | missed | RMS USD m | RMS / reference | paid / layer | correlation | USD m a year paid / recovered |
 |:---|:---|:---|:---|---:|---:|---:|---:|---:|---:|---:|:---|
 | R1 minimum index | 25.81 | 31.08 | 1346 / 926 | 120 / 18 | 103 | 1 | 27.7 | 1.53 | 4.15 | 0.52 | 114.2 / 27.5 |
 | R2 frequency matching | 29.41 | 31.08 | 1759 / 926 | 18 / 18 | 8 | 8 | 14.1 | 0.78 | 1.06 | 0.72 | 29.2 / 27.5 |
@@ -424,13 +439,14 @@ ggplot2::ggplot() +
 
 The in-sample figures score each rule on the storms it was calibrated
 on; here each storm is scored with a cover calibrated without it. The 87
-storm seasons (July to June) are split into 17 folds of 5 consecutive
-seasons, the last taking the two left over, and each fold’s storms are
-scored with the layer and levels calibrated on the other 16 folds. The
-intervals are 90% intervals from `n_boot` resamples of the seasons, so
-they reflect only which storms are scored. A fold whose rule cannot be
-fitted counts as no cover (payout 0). R1 and R2 are computed here; R3 is
-read from `inst/extdata/holdout_fitted_ramp.csv`, precomputed by
+storm seasons (July to June), 1939/40 to 2025/26, are split into 17
+blocks of five consecutive seasons, the last holding seven. Each block
+is scored with the layer and levels calibrated on the other 16 blocks,
+and the results are pooled. The intervals are 90% intervals from
+`n_boot` resamples of the seasons, so they reflect only which storms are
+scored. A block whose rule cannot be fitted counts as no cover (payout
+0). R1 and R2 are computed here; R3 is read from
+`inst/extdata/holdout_fitted_ramp.csv`, precomputed by
 `inst/scripts/holdout_fitted_ramp.R`, and the vignette stops if its
 header or storms do not match the settings and event set here (check not
 shown).
@@ -450,7 +466,7 @@ holdout <- holdout_summary(pooled, scheme, n_boot = n_boot, seed = seed)
 failures <- holdout_failures(regional, scheme)
 ```
 
-| cover | rule | paid | paid / recovered | RMS / flat payout | failed folds |
+| cover | rule | paid | paid / recovered | RMS / reference | failed blocks |
 |:---|:---|:---|:---|:---|---:|
 | Scotland | R1 minimum index | 22 / 18 | 1.12 \[1.02, 1.27\] | 0.26 \[0.15, 0.39\] | 0 |
 | Scotland | R2 frequency matching | 19 / 18 | 1.03 \[0.95, 1.14\] | 0.21 \[0.13, 0.31\] | 0 |
@@ -462,46 +478,88 @@ failures <- holdout_failures(regional, scheme)
 | England and Wales plus Scotland | R2 frequency matching | 37 / 35 | 1.16 \[0.93, 1.47\] | 0.73 \[0.52, 1.00\] | 0 |
 | England and Wales plus Scotland | R3 fitted ramp, squared | 28 / 35 | 0.71 \[0.51, 0.91\] | 0.67 \[0.49, 0.89\] | 0 |
 
-R1 cannot be fitted for England and Wales in 3 folds (1979/80 to
+R1 cannot be fitted for England and Wales in 3 blocks (1979/80 to
 1983/84, 1989/90 to 1993/94, 2004/05 to 2008/09), where one storm sets
-both levels; its RMS against a flat payout is 1.48 with those folds
-counted as no cover and 1.82 with them left out.
+both levels; its typical basis risk as a fraction of the reference
+cover’s is 1.48 with those blocks counted as no cover and 1.82 with them
+left out.
 
 ## Limits
 
-These points come from checks run while the package was developed.
+The figures below come from checks run while the package was developed;
+those checks are not part of the package. They give the evidence for the
+README’s section on modelled losses, data issues and next steps, under
+the same three headings.
+
+### Modelled losses and the size of the errors
 
 - **One gust field.** The index and the modelled loss are built from the
   same ERA5 gust footprints, so the basis risk measured here leaves out
   any error in that field. It is the basis risk against a model of the
   loss, not against real losses.
-- **ERA5 against station gusts.** At named stations ERA5 minus the
+- **ERA5 against station gusts.** At named stations, ERA5 minus the
   observed gust averages −7.7 m/s for the storm of October 1987 (6
   stations) and for that of October 2013 (5 stations), −3.6 m/s for
   Ciara (7 stations, though +0.9 and +2.6 m/s at the two named Midlands
   and Yorkshire stations) and +2.4 m/s for January 2002 (12 stations,
   +7.5 to +9.6 m/s at Edinburgh and Glasgow airports). The station
   coordinates, and so the ERA5 cell matched to each station, are
-  unverified, as is one October 1987 observation (Manston).
-- **January 2002 in Scotland.** The modelled Scottish loss for January
-  2002 (track 1346) is not supported by those gusts. Scoring the
-  hold-out without it changes the Scotland ratios by at most 0.02.
+  unverified, as is one October 1987 observation (Manston); without it
+  that storm’s mean is −8.6 m/s.
 - **Damage curve.** The damage ratio rises 11.6 times from 27 to 32 m/s
   but 6.9 times from 32 to 37 m/s, so a small error in the gust makes a
   large error in the loss.
-- **Missing storms.** The Hodges product, which the package uses,
-  matches 52 of the 77 storms named by the Met Office from 2015/16 to
-  2024/25, so about a third have no track, among them Arwen, Ciaran,
-  Malik and Eowyn; PERILS puts the UK loss for Eowyn at GBP 378m
-  ([Artemis, 26 January
-  2026](https://www.artemis.bm/news/perils-finalises-industry-loss-estimate-for-windstorm-eowyn-at-e765m/)).
-  The TempestExtremes product matches 24 of the 77.
-- **Before 1979.** The modelled annual loss triples after 1979, probably
-  partly because ERA5 has less data to draw on before the satellite era.
+- **January 2002 in Scotland.** The modelled Scottish loss for January
+  2002 (track 1346) is USD 0.395 bn, 2.3 times that of the next storm.
+  It is not supported by the observed gusts: ERA5 has 41.5 m/s in the
+  Glasgow cell, where 31.9 m/s was observed, and 38.9 m/s at Edinburgh,
+  against 31.4 m/s. Lowering the Scottish gusts uniformly by 3.35 m/s
+  (the median of ERA5 minus observed over the 12 stations) brings the
+  loss to USD 0.140 bn, by 7.5 m/s to 0.029 bn and by 9.6 m/s to 0.010
+  bn. Scoring the Scotland hold-out without this storm changes its
+  ratios by at most 0.015 (R1, typical basis risk as a fraction of the
+  reference cover’s).
+- **January 1968 in Glasgow.** ERA5 puts 35.6 m/s in the Glasgow cell
+  for the storm of 15 January 1968, about 10 m/s below the 46 m/s
+  observed. Raising its gusts by 10 m/s takes its modelled Scottish loss
+  from USD 0.107 bn to 1.861 bn, so with the gust errors corrected it,
+  not January 2002, would be Scotland’s largest storm.
+- **Before 1979.** The modelled annual UK loss triples after 1979,
+  probably partly because ERA5 has less data to draw on before the
+  satellite era.
 - **Ciara and Dennis.** The modelled UK loss for Ciara and Dennis
-  (February 2020) is about 2.75 times the ABI’s early wind figure of GBP
-  149m. The conversion from USD at 1.30 per GBP is approximate and
+  (February 2020), about GBP 410m, is 2.75 times the ABI’s early wind
+  figure of GBP 149m. The ABI figure was not checked against its source,
+  and the conversion from USD at 1.30 per GBP is approximate; both are
   unverified.
+
+### Incomplete catalogue
+
+- **Hodges.** The Hodges product, which the package uses, matches 52 of
+  the 77 storms named by the Met Office from 2015/16 to 2024/25, so 25
+  have no track, among them Arwen, Ciarán, Malik and Éowyn. PERILS puts
+  the UK loss for Éowyn at GBP 378m ([Artemis, 26 January
+  2026](https://www.artemis.bm/news/perils-finalises-industry-loss-estimate-for-windstorm-eowyn-at-e765m/));
+  its rank among UK windstorm losses rests on PERILS and is not checked
+  here.
+- **TempestExtremes.** The other C3S product matches 24 of the 77, has
+  none of Arwen, Ciarán, Malik and Éowyn, and covers only 2 of the 25
+  storms Hodges misses (Freya and Alex), so it does not fill the gaps.
+
+### Planned next
+
+- **Smaller regions and convex indices.** The England and Wales cover’s
+  typical basis risk out of sample is 0.78 of the reference cover’s, and
+  the interval includes 1; a mean gust is a poor guide to losses in a
+  large, varied region. See refinements 1 and 6 below.
+- **Comparison with observations.** The station comparisons above cover
+  four storms. Over 8 storms with published losses, the modelled losses
+  rank them well (Spearman 0.90) but their levels are poor: the storms
+  of October 1987 and October 2013 are 7 to 10 times too low.
+- **Sensitivity to the gust field.** The January 2002 and January 1968
+  figures above show how far a uniform shift in the gusts moves a
+  storm’s loss; the effect on the covers has not been measured.
+- **Decomposition of basis risk by source.** See refinement 4 below.
 
 ## Planned refinements
 

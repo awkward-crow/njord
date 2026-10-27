@@ -42,13 +42,13 @@ each over the near-optimal pairs), and \code{attachment_events} and
 attachment and the exhaustion.
 }
 \description{
-Chooses the attachment and exhaustion that make the ramp's payout closest
-to what the layer would recover, over all storms. The layer is that of
-\code{\link[=min_index_calibration]{min_index_calibration()}}: the loss above the loss with return period
-\code{attach_rp} (the retention), up to the loss with return period
-\code{exhaust_rp}, so the limit is the difference. A storm's recovery is its
-loss less the retention, between 0 and the limit, and its basis risk is
-the payout of \code{\link[=payout]{payout()}} with that limit minus the recovery. The
+Chooses the attachment and exhaustion that bring the cover's payouts as
+close as possible to the layer's recoveries over all storms. The layer
+pays the loss above the retention, the loss with return period
+\code{attach_rp}, up to the loss with return period \code{exhaust_rp}, so the limit
+is the difference. A storm's recovery is what the layer would have paid
+on it: its loss above the retention, capped at the limit. Its basis risk
+is the payout of \code{\link[=payout]{payout()}} with that limit minus the recovery. The
 attachment and exhaustion minimise the sum over all storms of the squared
 basis risk (\code{loss = "squared"}) or of its absolute value
 (\code{loss = "absolute"}).

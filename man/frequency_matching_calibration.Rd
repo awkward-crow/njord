@@ -31,18 +31,22 @@ in \code{\link[=min_index_calibration]{min_index_calibration()}}, and \code{k}, 
 attachment and the exhaustion.
 }
 \description{
-Sets the attachment so that as many storms trigger a payout as have a
-loss above the loss with return period \code{attach_rp}, and the exhaustion so
-that as many storms receive the full limit as have a loss above the loss
-with return period \code{exhaust_rp}. With \code{k} storms whose loss is strictly
-above the first loss and \code{m} strictly above the second, the attachment is
-the (k+1)-th largest index, so the \code{k} storms with the largest index lie
-above it, and the exhaustion is the m-th largest, so the \code{m} storms with
-the largest index lie at or above it. The levels depend only on the order
-of the indices and of the losses, not on their values. The losses with
-return period \code{rp} are as in \code{\link[=min_index_calibration]{min_index_calibration()}}.
+Sets the attachment so that as many storms receive a payout as the layer
+pays on, and the exhaustion so that as many are paid in full as the layer
+pays its limit on, counting down from the storm with the highest index. It
+uses only the ranking of the storms, so any increasing transformation of
+the index gives the same cover. The result is the frequency-matched cover.
 }
 \details{
+The layer pays on the storms whose loss is above the retention, the loss
+with return period \code{attach_rp}, and pays its limit on those whose loss is
+above the loss with return period \code{exhaust_rp}. With \code{k} storms whose loss
+is strictly above the first loss and \code{m} strictly above the second, the
+attachment is the (k+1)-th largest index, so the \code{k} storms with the
+largest index lie above it, and the exhaustion is the m-th largest, so the
+\code{m} storms with the largest index lie at or above it. The losses with
+return period \code{rp} are as in \code{\link[=min_index_calibration]{min_index_calibration()}}.
+
 Indices are ranked with ties counted separately (the k-th and (k+1)-th
 largest of 30, 30 are both 30). If the (k+1)-th largest index equals the
 k-th, fewer than \code{k} storms lie strictly above the attachment and so

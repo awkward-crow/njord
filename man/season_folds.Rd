@@ -20,8 +20,10 @@ starts in), \code{years} (the part of a year it adds to the catalogue, 0.5 or
 }
 \description{
 Splits the storm seasons of a catalogue into blocks of \code{block}
-consecutive seasons, for \code{\link[=holdout_calibration]{holdout_calibration()}}. A season runs from July
-to June and is named by the year it starts in. The catalogue covers the
+consecutive seasons, for the out-of-sample test of
+\code{\link[=holdout_calibration]{holdout_calibration()}}. A season runs from July to June and is named by
+the year it starts in. For 1940 to 2025 there are 87 seasons, 1939/40 to
+2025/26, in 17 blocks of five, the last holding seven. The catalogue covers the
 calendar years \code{first_year} to \code{last_year}, so its first season (starting
 in July of \code{first_year - 1}) and its last (starting in July of
 \code{last_year}) lie only half inside it and count as half a year each; every

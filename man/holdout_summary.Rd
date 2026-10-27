@@ -34,12 +34,15 @@ and storms is given too.
 The statistics are: \code{events}, the held-out storms; \code{recovering}, those
 with a recovery; \code{paid}, those with a payout; \code{false_payments}, those
 paid with no recovery; \code{misses}, those with a recovery paid nothing;
-\code{rms_basis_risk}, the root mean square of payout less recovery;
+\code{rms_basis_risk}, the typical basis risk (root-mean-square of payout
+minus recovery);
 \code{paid_to_recovery}, total payout over total recovery; \code{correlation}, of
 payout with recovery; \code{annual_payout} and \code{annual_recovery}, the totals
-over the catalogue's years; \code{rms_to_baseline}, the RMS basis risk over
-that of a cover with no index, which pays every held-out storm its
-fold's training mean recovery; \code{failed_folds} and \code{failed_events}.
+over the catalogue's years; \code{rms_to_baseline}, the typical basis risk as
+a fraction of the reference cover's: the reference cover ignores the wind
+and pays every storm the same amount, the average recovery of the seasons
+used for calibration (each held-out storm its fold's training mean
+recovery); \code{failed_folds} and \code{failed_events}.
 
 The same RMS statistics are also given over the fitted folds only,
 leaving out the storms of failed folds: \code{fitted_folds},

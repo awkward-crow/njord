@@ -187,8 +187,9 @@ toy_results <- data.frame(
 toy_results_scheme <- season_folds(2000, 2000)
 
 test_that("the summary matches a hand computation", {
-  # Basis risk 0, 1, -3, 0: RMS sqrt(10 / 4). Against the flat payout of 1,
-  # -1, 1, -2, 1: sum of squares 7. Paid 3 against 5 recovered, in a year.
+  # Basis risk 0, 1, -3, 0: RMS sqrt(10 / 4). Against the reference cover,
+  # which pays 1 a storm, -1, 1, -2, 1: sum of squares 7. Paid 3 against 5
+  # recovered, in a year.
   out <- holdout_summary(toy_results, toy_results_scheme, n_boot = 10)
   est <- setNames(out$estimate, out$statistic)
   expect_equal(est[["events"]], 4)
@@ -208,7 +209,7 @@ test_that("the summary matches a hand computation", {
 
 test_that("the summary also scores the fitted folds alone", {
   # Leaving out e4: basis risk 0, 1, -3 (sum of squares 10) over three
-  # storms, and against the flat payout -1, 1, -2 (6).
+  # storms, and against the reference cover -1, 1, -2 (6).
   out <- holdout_summary(toy_results, toy_results_scheme, n_boot = 10)
   est <- setNames(out$estimate, out$statistic)
   expect_equal(est[["fitted_folds"]], 1)

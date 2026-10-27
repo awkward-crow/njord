@@ -21,10 +21,14 @@ insured value, matched to \code{index_vec} by name.}
 \value{
 A data frame with one row per storm: \code{event} (the names of
 \code{index_vec}), \code{index}, \code{loss}, \code{payout}, and \code{basis_risk}, payout minus
-loss (positive when the payout exceeds the loss).
+loss (positive is an overpayment).
 }
 \description{
-The payout of the linear ramp against the modelled loss, storm by storm.
-Losses are matched to \code{index_vec} by name. The limit is in the units of
-the losses, a fraction of the total insured value.
+The payout of the linear ramp against \code{loss_vec}, storm by storm. A
+cover's basis risk on a storm is its payout minus the recovery, what the
+layer would have paid on the storm: its modelled loss above the retention,
+capped at the limit. Pass the recoveries as \code{loss_vec} to get it; the
+function does not apply the retention itself. Losses are matched to
+\code{index_vec} by name. The limit is in the units of the losses, a fraction
+of the total insured value.
 }

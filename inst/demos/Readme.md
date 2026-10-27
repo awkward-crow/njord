@@ -66,33 +66,35 @@ less than 72 hours away (`shared_max_within_72h()`): 1,323 storms, 15.38 a
 year. Losses are under the Schwierz curve with `mdd_scale = 0.8`, as in
 `ciara_demo.R`.
 
-The cover is a layer on Scotland's losses: it should pay the loss above the
-1-in-5 year loss (the retention), up to the 1-in-20 year loss, so its limit
-is the difference; what it should pay a storm is the storm's recovery. The
-payout is a straight line from nothing at the attachment to the limit at
-the exhaustion (`payout()`). Frequency matching sets the attachment so that
-as many storms trigger a payout as have a recovery, and the exhaustion so
-that as many receive the full limit as have a loss above the 1-in-20 year
-loss. The basis risk is measured against the modelled loss, which is built
-from the same ERA5 gust field as the index, so errors in that field are not
-part of it.
+The cover is compared with a layer on Scotland's losses, which pays the
+loss above the *retention* (the loss exceeded about once in five years) up
+to the loss exceeded about once in twenty, so its *limit* is the
+difference. A storm's *recovery* is what the layer would have paid on it,
+and the cover's *basis risk* on the storm is its payout minus the recovery
+(positive is an overpayment). The payout is a straight line from nothing at
+the *attachment* to the limit at the *exhaustion* (`payout()`). The
+frequency-matched cover ranks the storms by wind index and pays on as many
+of the windiest as the layer pays on, and in full on as many as the layer
+pays its limit on, so it pays about as often as the layer would. The basis
+risk is measured against the modelled loss, which is built from the same
+ERA5 gust field as the index, so errors in that field are not part of it.
 
 It gives:
 
 ```
 Basis risk here is measured against a modelled loss from the same ERA5 gust field as the index, not against real losses.
-Scotland cover, frequency_matching_calibration(), on 1323 storms of 1940-2025 (15.38 a year); amounts in USD.
+Frequency-matched Scotland cover (frequency_matching_calibration()), on 1323 storms of 1940-2025 (15.38 a year); amounts in USD.
 Layer:        USD 73.1 m xs USD 53.8 m (the 1-in-5 to 1-in-20 year Scottish loss)
 Attachment:   32.62 m/s, set by track 1642 (Jan 2015)
 Exhaustion:   35.05 m/s, set by track 1266 (Dec 1998)
 Storms paid / storms recovering:      18 / 18
 False payments (paid, no recovery):   2
 Missed storms (recovery, not paid):   2
-RMS basis risk:                       USD 1.2 m a storm
-RMS against a flat payout:            0.20
+Typical basis risk (RMS):             USD 1.2 m a storm
+Typical basis risk / reference cover: 0.20
 Paid / layer:                         1.03
 Correlation of payout with recovery:  0.98
-(A flat payout pays every storm the mean recovery.)
+(The reference cover ignores the wind and pays every storm the mean recovery.)
 
 The 5 storms with the largest Scottish loss, in USD m:
  track     date index  loss recovery payout
@@ -104,8 +106,12 @@ The 5 storms with the largest Scottish loss, in USD m:
 Track 1346 (January 2002): its modelled Scottish loss is not supported by observed gusts.
 ```
 
-The RMS against a flat payout is the RMS basis risk over that of a cover
-paying every storm the mean recovery, so below 1 the index helps.
+*False payments* are storms the cover pays on where the layer pays
+nothing, and *missed storms* are storms the layer pays on that the cover
+does not. The typical basis risk is the root-mean-square of payout minus
+recovery. The *reference cover* ignores the wind and pays every storm the
+same amount, the mean recovery. The cover's typical basis risk as a
+fraction of the reference cover's is below 1 when the index helps.
 
 In an interactive session it also draws the plot behind the figure in the
 main README: for
