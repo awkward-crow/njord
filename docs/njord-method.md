@@ -25,7 +25,7 @@ For each identified storm event the dataset provides:
 
 - **Footprints** — the maximum 10-metre wind gust (m s⁻¹) over a 72-hour
   window centred on the storm’s peak land impact, on a 0.25° × 0.25°
-  grid (~28 km). Njord uses the native ERA5 resolution (0.25°) product.
+  grid (~28 km). njord uses the native ERA5 resolution (0.25°) product.
   Each footprint is restricted to a 1000 km radius around the storm
   track to avoid cross-contamination between contemporaneous events.
 
@@ -33,14 +33,14 @@ For each identified storm event the dataset provides:
   10 m gust speed at the storm centre for all tracked systems 1940–2025.
   Two tracking algorithms are available: *Hodges* (TRACK; Hodges,
   1995, 1999) which follows 850 hPa relative vorticity and
-  *TempestExtremes* which tracks MSLP minima. Njord uses the Hodges
+  *TempestExtremes* which tracks MSLP minima. njord uses the Hodges
   product, consistent with CLIMADA’s default configuration and Mishra et
   al. (2026).
 
 - **Summary indicators** — pre-computed annual storm counts, mean gust,
   Storm Severity Index (SSI), normalised SSI, area ratio and wind gust
   ratio, aggregated by NUTS region (NUTS0/1/2) and wind speed threshold
-  (0, 15.6, 20, 25 m s⁻¹) for 1940–2025 (~170 000 rows).
+  (0, 15.6, 20, 25 m s⁻¹) for 1940–2025.
 
 The footprint archive (downloaded via the `ecmwfr` package) currently
 comprises **721 monthly zip files** (from footprints_hodges_194002.zip
@@ -171,14 +171,15 @@ the UK cover under R1 pays the largest storms in full, but 120 storms
 pay out against 18 that would recover, so it pays about four times what
 the layer would each year. Splitting the UK into an England and Wales
 cover and a Scotland cover roughly halves the number of storms paid with
-nothing to recover (49 against 103). It also pays in full the storm that
-hit Scotland hardest (January 2002), which the UK cover misses. The
-Scotland cover tracks its layer closely; the England and Wales cover
-does not. The two regional covers together are, however, a bigger cover
-than the UK one: their limits add up to USD 0.314 bn against 0.243 bn,
-and their layers would recover USD 0.036 bn a year against 0.028 bn. So
-each cover is best judged against its own layer rather than against the
-other. The figures come from the tables below.
+nothing to recover (49 against 103). It also pays in full the storm with
+the largest modelled Scottish loss (January 2002, a loss not supported
+by observed gusts; see Limits), which the UK cover misses. The Scotland
+cover tracks its layer closely; the England and Wales cover does not.
+The two regional covers together are, however, a bigger cover than the
+UK one: their limits add up to USD 0.314 bn against 0.243 bn, and their
+layers would recover USD 0.036 bn a year against 0.028 bn. So each cover
+is best judged against its own layer rather than against the other. The
+figures come from the tables below.
 
 ## Results in sample
 
@@ -433,7 +434,7 @@ ggplot2::ggplot() +
   ggplot2::theme_minimal()
 ```
 
-<img src="figures/r1-figure-1.png" alt="" width="70%" />
+<img src="figures/r1-figure-1.png" alt="Three stacked panels, one for each R1 cover (UK, England and Wales, Scotland). Each shows the payout ramp as a red line and each storm's layer recovery in USD bn as grey points, against the exposure-weighted mean gust index in m/s." width="70%" />
 
 ## Out-of-sample test
 
@@ -553,9 +554,10 @@ the same three headings.
   the interval includes 1; a mean gust is a poor guide to losses in a
   large, varied region. See refinements 1 and 6 below.
 - **Comparison with observations.** The station comparisons above cover
-  four storms. Over 8 storms with published losses, the modelled losses
-  rank them well (Spearman 0.90) but their levels are poor: the storms
-  of October 1987 and October 2013 are 7 to 10 times too low.
+  four storms. For the storms with published losses, the modelled losses
+  rank them well (Spearman 0.90 over 8 storms, 90% bootstrap interval
+  0.62 to 1.00) but their levels are poor: the storms of October 1987
+  and October 2013 are 7 to 10 times too low.
 - **Sensitivity to the gust field.** The January 2002 and January 1968
   figures above show how far a uniform shift in the gusts moves a
   storm’s loss; the effect on the covers has not been measured.
@@ -571,8 +573,8 @@ could be considered.
 The two regional covers, England and Wales and Scotland, are a first
 step towards a zonal trigger. They already reduce geographic basis risk,
 the risk that a storm devastates one region while the UK-wide index
-stays below the attachment: the Scotland cover pays the January 2002
-storm that the UK cover misses. The next step is a separate cover for
+stays below the attachment: a regional cover reacts to a regional storm
+where a UK-wide index may not. The next step is a separate cover for
 each of the 12 UK NUTS1 regions (e.g. North West England, Wales, South
 East England), each with its own index and layer, at the cost of
 additional complexity in the contract specification. England and Wales

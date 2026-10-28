@@ -38,10 +38,12 @@ on and on storm seasons it was not.
     among the storms the layer pays on, so the cover reaches all of
     them, but it also pays on many weaker storms the layer does not pay
     on;
-  - `frequency_matching_calibration()` (recommended) ranks the storms by
-    wind index and pays on as many of the windiest as the layer pays on
-    (18 for Scotland), and in full on as many as the layer pays its
-    limit on, so the cover pays about as often as the layer would;
+  - `frequency_matching_calibration()` (recommended: the simplest of the
+    three, and out of sample about as good as the fitted ramp) ranks the
+    storms by wind index and pays on as many of the windiest as the
+    layer pays on (18 for Scotland), and in full on as many as the layer
+    pays its limit on, so the cover pays about as often as the layer
+    would;
   - `fitted_ramp_calibration()` chooses the levels that bring the
     cover’s payouts as close as possible to the layer’s recoveries over
     all storms.

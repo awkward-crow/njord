@@ -33,6 +33,7 @@ docs/njord-method.md: vignettes/njord-method.Rmd $(wildcard R/*.R) $(wildcard in
 	  R CMD INSTALL --no-test-load -l $$d/lib . > $$d/install.log 2>&1; \
 	  cp $< $$d/gfm/; \
 	  (cd $$d/gfm && R_LIBS=$$d/lib Rscript -e "f <- rmarkdown::github_document(html_preview = FALSE); f\$$knitr\$$opts_chunk\$$fig.path <- \"figures/\"; rmarkdown::render(\"njord-method.Rmd\", output_format = f, quiet = TRUE)"); \
-	  mkdir -p docs; rm -rf docs/figures; \
-	  cp $$d/gfm/njord-method.md docs/; cp -r $$d/gfm/figures docs/; \
+	  mkdir -p docs; rm -rf docs/figures.new; \
+	  cp -r $$d/gfm/figures docs/figures.new; cp $$d/gfm/njord-method.md docs/; \
+	  rm -rf docs/figures; mv docs/figures.new docs/figures; \
 	  rm -rf $$d; echo "wrote docs/njord-method.md and docs/figures/"'
